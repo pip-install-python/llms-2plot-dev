@@ -169,13 +169,38 @@ class Client:
         self._kind = kind
         self._loop = loop
 
-    def get(self, path: str, user_agent: str = BROWSER_UA, accept: str = None) -> Response:
-        headers = {"User-Agent": user_agent}
-        if accept is not None:
-            headers["Accept"] = accept
+    def get(self, path: str, user_agent: str = BROWSER_UA, accept: str = None,
+            headers: dict | None = None) -> Response:
+        """GET. `headers=` merges in anything else the caller needs.
 
+        The extra mapping exists for the surfaces that key off a header the
+        two named arguments cannot express — the geo guardrail reads
+        `CF-IPCountry`, the operator panel reads `X-LLMS-Panel-Token`. Passed
+        last so a caller can override User-Agent/Accept deliberately.
+        """
+        merged = {"User-Agent": user_agent}
+        if accept is not None:
+            merged["Accept"] = accept
+        merged.update(headers or {})
+        return self.request("GET", path, headers=merged)
+
+    def post(self, path: str, json=None, user_agent: str = BROWSER_UA,
+             headers: dict | None = None) -> Response:
+        """POST, for the one route that carries page navigation.
+
+        `/_dash-update-component` is how a Dash SPA changes pages after the
+        first load, so a guardrail that covers only GET covers only the
+        landing request — every subsequent navigation would sail through. It
+        is the surface most easily forgotten and the one that matters most.
+        """
+        merged = {"User-Agent": user_agent, "Content-Type": "application/json"}
+        merged.update(headers or {})
+        return self.request("POST", path, headers=merged, json=json)
+
+    def request(self, method: str, path: str, headers: dict, json=None) -> Response:
+        """The one place the three backends' clients are reconciled."""
         if self._kind == "werkzeug":
-            r = self._raw.get(path, headers=headers)
+            r = self._raw.open(path, method=method, headers=headers, json=json)
             # errors="replace", not `as_text=True`: the latter decodes strictly
             # and raises UnicodeDecodeError on any binary response, so a test
             # that merely checks a favicon or a manifest icon RESOLVES would
@@ -186,20 +211,19 @@ class Client:
 
         if self._kind == "quart":
             async def fetch():
-                r = await self._raw.get(path, headers=headers)
+                r = await self._raw.open(path, method=method, headers=headers,
+                                         json=json)
                 # Same lenient decode as the werkzeug branch above, and for the
                 # same reason — this branch was simply missed when that one was
                 # fixed. Quart's `get_data(as_text=True)` decodes strictly, so
                 # any test that merely checks a PNG RESOLVES died on the file's
-                # first non-UTF-8 byte. It went unnoticed because the tests that
-                # fetch binary assets live in tests/test_social_card.py, which
-                # was untracked and therefore never ran in CI.
+                # first non-UTF-8 byte.
                 body = (await r.get_data()).decode("utf-8", "replace")
                 return r.status_code, body, dict(r.headers)
 
             return Response(*self._loop.run_until_complete(fetch()))
 
-        r = self._raw.get(path, headers=headers)
+        r = self._raw.request(method, path, headers=headers, json=json)
         return Response(r.status_code, r.text, dict(r.headers))
 
 

@@ -1,252 +1,125 @@
-# Dash Documentation Boilerplate — the 2plot network's template
+# Dash Improve My LLMs — the AI and crawler surface for Dash apps
 
 ![logo](assets/intro_img.jpg)
 
-> **`dash-documentation-boilerplate` — the markdown-driven documentation template every `*.2plot.dev` component site is forked from.** By [Pip Install Python](https://2plot.dev).
+> **`dash-improve-my-llms` — the crawler, agent and SEO companion every Dash app mounts in one line.** By [Pip Install Python](https://2plot.dev).
 
-Create beautiful, interactive documentation for your Dash components, data science workflows, and applications with markdown-driven content, live code examples, and automatic theme persistence.
-
----
-
-## What is This?
-
-The Dash Documentation Boilerplate is a **production-ready framework** for creating professional documentation sites for your Dash projects. Whether you're documenting a component library, showcasing data visualizations, or building a comprehensive application guide, this boilerplate provides everything you need.
-
-It is also the reference implementation of the **2plot network standard**: the site-identity rules, the internal-traffic analytics contract, and the CI baseline that every satellite copies verbatim. Those files are listed on the [Network Standard](/network-standard) page.
-
-### Built With Modern Technologies
-
-- **Dash 4.1+** - Pluggable backends (Flask / FastAPI / Quart), MCP-aware
-- **Dash Mantine Components 2.7+** - Beautiful, accessible UI components
-- **Mantine 8.3+** - Modern React component library
-- **React 18** - Latest React features
-- **Python 3.11+** - Modern Python with type hints
+A Dash app is a JavaScript shell. A crawler that fetches it gets an empty
+`<div>`; an agent that reads it learns nothing; a search engine indexes a
+loading spinner. This package closes that gap without asking you to change
+how you write Dash.
 
 ---
 
-## Key Features
+## What it does
 
-### 📝 Markdown-Driven Documentation
-Write your documentation in **markdown files** with full Python integration. The framework automatically discovers markdown files in the `docs/` directory and generates pages with:
+One call — `add_llms_routes(app)` — mounts the whole machine-facing surface:
 
-- **Frontmatter metadata** for page configuration
-- **Custom directives** for interactive examples
-- **Automatic routing** based on your file structure
-- **Table of contents** generation
+| Surface | Who reads it |
+|---|---|
+| `/llms.txt`, `/llms-small.txt`, `/llms-full.txt` | agents pasted a URL, and the crawlers that follow it |
+| `/<page>/llms.txt` | one page's prose, content-negotiated: Markdown for agents, rendered for browsers |
+| `/robots.txt` | every crawler, generated from one vendor registry |
+| `/sitemap.xml` | search engines, with priority inferred from your page tree |
+| a static-HTML prerender | crawlers that do not run JavaScript — the actual fix for the empty `<div>` |
+| an MCP resource per page | Claude, ChatGPT and any other MCP client, natively |
 
-### 🎨 Beautiful UI/UX
-Built with Dash Mantine Components for a modern, professional look:
-
-- **Responsive design** - Works beautifully on mobile, tablet, and desktop
-- **Dark & Light themes** - Automatic theme persistence via localStorage
-- **Smooth transitions** - Professional animations and interactions
-- **Customizable** - Easy to theme with your brand colors
-- **Accessible** - WCAG compliant components
-
-### 🔧 Custom Directives
-Powerful directives to enhance your documentation:
-
-- `.. toc::` - Generate table of contents from headings
-- `.. exec::module.path` - Embed interactive Python components
-- `.. source::path/to/file.py` - Display source code with syntax highlighting
-- `.. kwargs::ComponentName` - Auto-generate component props documentation
-
-### 🤖 AI/LLM Integration
-Powered by [dash-improve-my-llms](https://pypi.org/project/dash-improve-my-llms/) **{{VERSION:dash-improve-my-llms}}** (the version is read from the installed package, never hardcoded):
-
-- **`LLMS_DOC` pattern** — write a module-level prose string per page; the package serves it verbatim at `/<page>/llms.txt`
-- **Tiered corpus** — `/llms.txt` (index), `/llms-small.txt` (compact briefing), `/llms-full.txt` (full corpus), each rendered for browsers and raw for agents
-- **Multi-backend** — same surface under Flask, FastAPI, and Quart (auto-detected)
-- **MCP bridge** — each page's prose registers as a `dash.mcp` resource on Dash 4.3+
-- **SEO** — `/sitemap.xml` with priority inference, `/robots.txt` with bot-class policies, and `configure_seo()` so crawlers receive the same icons, social card, and titles a browser gets
-- **Bot management** — training crawlers blocked, search citations allowed, browsers untouched
-- **Share with AI** — paste your URL into ChatGPT/Claude; they read the prose docs directly
-
-### 🐋 Production Ready
-
-- **Docker support** - Dockerfile and docker-compose included
-- **Gunicorn server** - Production-ready WSGI server
-- **Environment config** - Easy deployment configuration
-- **Optimized builds** - Fast loading and rendering
+Installed here: **{{VERSION:dash-improve-my-llms}}** — this site reads the
+number from the package that is actually serving it, never from prose.
 
 ---
 
-## Quick Start
+## The three audiences
 
-### 1. Installation
+This site is organised the way the package is: by who is asking.
+
+- **[MCP clients](/audiences/mcp-clients)** — an assistant that speaks MCP
+  mounts your docs as a resource and reads them natively. No copying, no
+  scraping, no context window spent on HTML.
+- **[Web crawlers](/audiences/web-crawlers)** — Googlebot, ClaudeBot,
+  GPTBot, PerplexityBot. Each gets a document rendered for it, under a
+  policy you declare once and serve everywhere.
+- **[Paste-to-chat](/audiences/llm-context)** — a person pastes your URL
+  into a chat window. The assistant fetches prose, not a bundle.
+
+---
+
+## Control, not just discovery
+
+Discovery is the floor. Since 2.7 the package is also the layer that decides
+**who gets served at all**:
+
+- **Per-vendor policy** — allow, block or meter each crawler by name. One
+  fold drives `robots.txt` and the middleware, so what you publish and what
+  you enforce cannot drift apart.
+- **The country guardrail** — `configure_geo(deny_countries=[...])` answers
+  451 on *every* surface for a listed country: pages, assets, the corpus,
+  `robots.txt`, even the favicon. Compliance, uniformly applied.
+- **The rate contract** — a stated ceiling on the corpus routes, enforced,
+  failing open on any limiter error.
+- **The operator panel** — a read-only, token-gated page showing the live
+  effective policy of every surface, including which header resolved this
+  request's country.
+
+Each of those takes a **callable** as well as a static value, and the
+callable is read per request. That is the seam this site's
+[control board](/admin/control-board) writes through: flip a country on the
+map, and the next request from it gets 451 — in every worker, with no
+restart and no redeploy.
+
+---
+
+## Install
 
 ```bash
-# Clone the repository
-git clone https://github.com/pip-install-python/Dash-Documentation-Boilerplate.git
-cd Dash-Documentation-Boilerplate
-
-# Install Python dependencies
-pip install -r requirements.txt
-# markdown2dash pins gunicorn<22 against this project's CVE-driven
-# gunicorn>=23 floor, so it installs without its dependency graph.
-pip install --no-deps markdown2dash==0.1.2
-
-# Install Node dependencies (for Mantine components)
-npm install
+pip install dash-improve-my-llms[flask]      # or [fastapi], [quart], [all]
 ```
-
-### 2. Run the Development Server
-
-```bash
-./scripts/dev.sh          # or: python run.py
-```
-
-Visit `http://localhost:8559` in your browser.
-
-### 3. Create Your First Documentation Page
-
-Create a new folder in `docs/` with a markdown file:
-
-```markdown
----
-name: My Component
-description: Description of my awesome component
-endpoint: /components/my-component
-icon: mdi:code-tags
----
-
-## My Component
-
-Your documentation content here...
-
-.. toc::
-
-## Features
-
-- Feature 1
-- Feature 2
-```
-
-That's it! Your page will automatically appear in the navigation.
-
----
-
-## Example Documentation
-
-This site includes several example pages to demonstrate the capabilities:
-
-- **Getting Started** - Learn how to create documentation pages
-- **Custom Directives** - See all available directives in action
-- **Interactive Components** - Examples of callbacks and state management
-- **Data Visualization** - Plotly integration examples
-- **AI Integration** - Showcase AI/LLM features
-
----
-
-## Project Structure
-
-```
-dash-documentation-boilerplate/
-├── assets/                      # Static assets and CSS
-│   ├── m2d.css                 # Markdown-to-Dash styling
-│   └── main.css                # Custom styles
-│
-├── components/                  # Reusable UI components
-│   ├── appshell.py             # Main app layout
-│   ├── header.py               # Header with search and theme toggle
-│   └── navbar.py               # Navigation sidebar
-│
-├── docs/                        # Your documentation content
-│   └── your-component/
-│       ├── component.md        # Markdown documentation
-│       └── examples.py         # Python interactive examples
-│
-├── lib/                         # Utility libraries
-│   ├── constants.py            # App-wide constants
-│   └── directives/             # Custom markdown directives
-│       ├── kwargs.py           # Component props tables
-│       ├── source.py           # Source code display
-│       └── toc.py              # Table of contents
-│
-├── pages/                       # Dash multi-page app
-│   ├── home.md                 # This home page
-│   ├── home.py                 # Home page layout
-│   └── markdown.py             # Dynamic markdown loader
-│
-├── scripts/                     # Post-deploy checks against a live site
-├── tests/                       # pytest suite (all three backends)
-├── .github/workflows/           # CI and CD
-│
-├── templates/
-│   └── index.html              # Custom HTML template
-│
-├── CHANGELOG.md                # Version history
-├── README.md                   # Full documentation
-├── render.yaml                 # Render deployment blueprint
-├── requirements.txt            # Python dependencies
-├── package.json                # Node dependencies
-├── Dockerfile                  # Docker container
-└── run.py                      # Application entry point
-```
-
----
-
-## Customization
-
-### Change Primary Color
-
-Edit `lib/constants.py`:
 
 ```python
-PRIMARY_COLOR = "teal"  # Change to any Mantine color
+import dash
+from dash_improve_my_llms import add_llms_routes, LLMSConfig
+
+app = dash.Dash(__name__, use_pages=True)
+
+add_llms_routes(app, LLMSConfig(warn_missing_llms_doc=True))
 ```
 
-### Modify Styles
+That is the whole integration. Every page that defines a module-level
+`LLMS_DOC` string is served verbatim at its own `llms.txt`; every page
+without one is still indexed, still prerendered, still in the sitemap.
 
-- `assets/main.css` - General application styling
-- `assets/m2d.css` - Markdown-specific styling
-
-### Configure AI/LLM Integration
-
-Update `run.py` to configure bot management and SEO:
+### Writing a page's prose
 
 ```python
-from dash_improve_my_llms import RobotsConfig
+# pages/pricing.py
+LLMS_DOC = """
+# Pricing
 
-app._base_url = "https://your-production-url.com"
-app._robots_config = RobotsConfig(
-    block_ai_training=True,
-    allow_ai_search=True,
-    crawl_delay=10
-)
+Three tiers. The free tier has no time limit.
+"""
 ```
+
+No layout walking, no extraction heuristics, no second copy of your docs to
+keep in sync.
 
 ---
 
-## Deployment
+## Backends
 
-### Docker
-
-```bash
-# Build the image
-docker build -t dash-docs-boilerplate .
-
-# Run the container
-docker run -p 8550:8550 dash-docs-boilerplate
-```
-
-### Docker Compose
-
-```bash
-docker-compose up
-```
-
-Visit `http://localhost:8550`
+Dash 4.1 made the server pluggable, and the package follows it: the same
+surface under **Flask**, **FastAPI** and **Quart**, auto-detected. Nothing
+in the list above is backend-specific, and the package's suite runs against
+all three.
 
 ---
 
 ## Resources
 
-- **GitHub Repository**: [Dash-Documentation-Boilerplate](https://github.com/pip-install-python/Dash-Documentation-Boilerplate)
-- **Full Documentation**: See [README.md](https://github.com/pip-install-python/Dash-Documentation-Boilerplate/blob/main/README.md)
-- **Changelog**: [CHANGELOG.md](https://github.com/pip-install-python/Dash-Documentation-Boilerplate/blob/main/CHANGELOG.md)
-- **AI Integration Guide**: [AI/LLM Integration](/examples/ai-integration)
-- **Multi-Site Networks**: [Wiring a family of documentation sites together](/networks)
+- **PyPI**: [dash-improve-my-llms](https://pypi.org/project/dash-improve-my-llms/)
+- **GitHub**: [pip-install-python/dash-improve-my-llms](https://github.com/pip-install-python/dash-improve-my-llms)
+- **The network**: [2plot.dev](https://2plot.dev) indexes every component
+  site that runs this package — including this one.
+- **Multi-site networks**: [wiring a family of documentation sites together](/networks)
 
 ### Community
 
@@ -257,8 +130,4 @@ Visit `http://localhost:8550`
 
 ## License
 
-MIT License - see [LICENSE](https://github.com/pip-install-python/Dash-Documentation-Boilerplate/blob/main/LICENSE) for details.
-
----
-
-**Ready to start?** Check out the example documentation pages to see what you can build!
+MIT License — see [LICENSE](https://github.com/pip-install-python/dash-improve-my-llms/blob/main/LICENSE) for details.

@@ -126,8 +126,13 @@ def test_smoke_script_detects_a_foreign_canonical(wired, smoke, monkeypatch, cap
 
     def rehosted(url, user_agent=smoke.BROWSER_UA, accept=None):
         status, body, headers = original(url, user_agent, accept)
+        # Read the host from constants rather than spelling it: a fork
+        # changes BASE_URL and this check would otherwise silently stop
+        # rewriting anything and pass on a no-op.
+        from lib.constants import BASE_URL
+
         return status, body.replace(
-            'rel="canonical" href="https://boilerplate.2plot.dev',
+            f'rel="canonical" href="{BASE_URL}',
             'rel="canonical" href="https://someone-elses-host.example.com',
         ), headers
 

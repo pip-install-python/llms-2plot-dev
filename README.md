@@ -1,10 +1,17 @@
-# Dash Documentation Boilerplate — the 2plot network's template
+# Dash Improve My LLMs — the AI and crawler surface for Dash apps
 
 <p align="center">
   <img src="https://cdn.2plot.ai/github_assets/dark_mode_2plot.png" alt="2plot" width="640">
 </p>
 
-> `dash-documentation-boilerplate` — the markdown-driven documentation template every `*.2plot.dev` component site is forked from. By [Pip Install Python](https://2plot.dev).
+> `dash-improve-my-llms` — the crawler, agent and SEO companion every Dash app mounts in one line. By [Pip Install Python](https://2plot.dev).
+
+**This repository is `llms-2plot-dev`** — the documentation site for the
+`dash-improve-my-llms` package, forked from
+[dash-documentation-boilerplate](https://github.com/pip-install-python/dash-documentation-boilerplate)
+1.6.7 and receiving its wave syncs. Everything below the "Template
+machinery" divider documents the inherited template and applies here
+unchanged; the sections above it are this site's own.
 
 <!-- One badge for both: cd.yml's first job `uses:` ci.yml, so this status IS
      the full CI matrix plus the deploy — the deploy cannot start unless CI
@@ -19,11 +26,18 @@
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Live:** [boilerplate.2plot.dev](https://boilerplate.2plot.dev) · the template every
-[2plot.dev](https://2plot.dev) component documentation site is built from.
+**Live:** [llms.2plot.dev](https://llms.2plot.dev) · the documentation site for
+[dash-improve-my-llms](https://pypi.org/project/dash-improve-my-llms/), and the
+2plot network's owner-control R&D bench.
 
 
-A comprehensive boilerplate for creating beautiful, interactive documentation for your Dash components, data science workflows, and applications. Features markdown-driven content, live code examples, and automatic theme persistence.
+A Dash app is a JavaScript shell: a crawler that fetches it gets an empty `<div>`. This package mounts `/llms.txt`, `/robots.txt`, `/sitemap.xml`, a static-HTML prerender, an MCP bridge, per-vendor policy, a country guardrail and a read-only operator panel — under Flask, FastAPI or Quart.
+
+---
+
+## Template machinery
+
+Everything from here down documents the inherited boilerplate.
 
 ![Documentation Preview](assets/intro_img.jpg)
 

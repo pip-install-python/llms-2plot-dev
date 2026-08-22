@@ -23,13 +23,14 @@ import os
 # Naming rules, from the network standard:
 #   - the PACKAGE NAME belongs in the description, not in the brand;
 #   - "Pip Install Python" is the byline (who made it), never the site name.
-SITE_BRAND = "Dash Documentation Boilerplate — the 2plot network's template"
+SITE_BRAND = "Dash Improve My LLMs — the AI and crawler surface for Dash apps"
 
 SITE_DESCRIPTION = (
-    "dash-documentation-boilerplate — the markdown-driven documentation "
-    "template every *.2plot.dev component site is forked from. Interactive "
-    "examples, Dash Mantine Components theming, and first-class AI/LLM and "
-    "SEO surfaces via dash-improve-my-llms. By Pip Install Python."
+    "dash-improve-my-llms — the crawler, agent and SEO companion every Dash "
+    "app mounts in one line: /llms.txt, /robots.txt, /sitemap.xml, bot "
+    "detection, static-HTML prerender, an MCP bridge, per-vendor policy, the "
+    "country guardrail and the operator policy panel. Flask, FastAPI and "
+    "Quart. By Pip Install Python."
 )
 
 # Resolves {%title%} in templates/index.html, which is what the served HTML
@@ -41,7 +42,7 @@ APP_TITLE = SITE_BRAND
 # The brand without its tagline. SITE_BRAND is right for a page that has room
 # for it; this is for the places that prefix something else and would otherwise
 # run past every platform's truncation point.
-SITE_SHORT_NAME = "Dash Documentation Boilerplate"
+SITE_SHORT_NAME = "Dash Improve My LLMs"
 
 # Prefixed to every per-page title (`pages/markdown.py`, `pages/home.py`), and
 # therefore NOT only a browser-tab string: Dash passes the page title straight
@@ -62,7 +63,7 @@ SITE_SHORT_NAME = "Dash Documentation Boilerplate"
 PAGE_TITLE_PREFIX = f"{SITE_SHORT_NAME} | "
 
 PRIMARY_COLOR = "teal"
-APP_VERSION = "1.2.5"
+APP_VERSION = "1.0.0"
 
 # ---------------------------------------------------------------------------
 # The network's internal-traffic contract
@@ -119,7 +120,7 @@ def internal_ua(caller: str = "") -> str:
 #
 # So: override APP_BASE_URL per deployment. `require_owned_base_url()` below
 # refuses to boot in production if you didn't.
-DEFAULT_BASE_URL = "https://boilerplate.2plot.dev"
+DEFAULT_BASE_URL = "https://llms.2plot.dev"
 BASE_URL = os.environ.get("APP_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
 
 # ---------------------------------------------------------------------------
@@ -164,7 +165,7 @@ BASE_URL = os.environ.get("APP_BASE_URL", DEFAULT_BASE_URL).rstrip("/")
 # after every deploy and checks its actual pixels against them — the only
 # check that can catch the CDN object being replaced with something a
 # different shape.
-OG_IMAGE_URL = "https://cdn.2plot.ai/github_assets/boilerplate.2plot.dev.png"
+OG_IMAGE_URL = "https://cdn.2plot.ai/github_assets/llms.2plot.dev.png"
 OG_IMAGE_WIDTH = 1200
 OG_IMAGE_HEIGHT = 630
 OG_IMAGE_TYPE = "image/png"
@@ -180,7 +181,8 @@ OG_IMAGE_ALT = SITE_BRAND
 # checklist item, not code.
 PUBLISHER = "Pip Install Python LLC"
 SAME_AS = [
-    "https://github.com/pip-install-python/dash-documentation-boilerplate",
+    "https://github.com/pip-install-python/dash-improve-my-llms",
+    "https://pypi.org/project/dash-improve-my-llms/",
 ]
 
 
@@ -211,7 +213,7 @@ def require_owned_base_url(base_url: str = BASE_URL) -> None:
             f"<link rel='canonical' href='{DEFAULT_BASE_URL}'> on every page, "
             "telling search engines it is a duplicate of the documentation "
             "boilerplate. Set APP_BASE_URL to this deployment's real origin "
-            "(e.g. https://leaflet.2plot.dev)."
+            "(e.g. https://llms.2plot.dev)."
         )
 
     for platform_host in ("onrender.com", "herokuapp.com", "railway.app", "fly.dev"):

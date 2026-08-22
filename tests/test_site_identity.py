@@ -31,7 +31,7 @@ from lib.constants import (
 # Spelled out rather than imported, so that renaming the constant cannot
 # silently rename the site. Changing the brand should require changing this
 # line, deliberately.
-EXPECTED_BRAND = "Dash Documentation Boilerplate — the 2plot network's template"
+EXPECTED_BRAND = "Dash Improve My LLMs — the AI and crawler surface for Dash apps"
 
 
 def test_brand_constant_is_the_agreed_identity():
@@ -87,8 +87,8 @@ def test_the_package_name_is_in_the_description_not_the_brand():
     in the description. A brand of "Pip Install Python" would make every
     satellite in the network share one name.
     """
-    assert "dash-documentation-boilerplate" in SITE_DESCRIPTION
-    assert "dash-documentation-boilerplate" not in SITE_BRAND
+    assert "dash-improve-my-llms" in SITE_DESCRIPTION
+    assert "dash-improve-my-llms" not in SITE_BRAND
     assert "Pip Install Python" in SITE_DESCRIPTION
     assert "Pip Install Python" not in SITE_BRAND
 

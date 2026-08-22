@@ -64,7 +64,7 @@ STUB_MARKER = "This page contains interactive content that requires JavaScript"
 # This app's one identity (lib/constants.SITE_BRAND). tests/test_site_identity
 # asserts every local surface carries it; this pins the DEPLOYED artifact to
 # it, which is the half no unit test can reach.
-SITE_H1 = "# Dash Documentation Boilerplate — the 2plot network's template"
+SITE_H1 = "# Dash Improve My LLMs — the AI and crawler surface for Dash apps"
 
 # The container port. Matches the Dockerfile's EXPOSE and CMD.
 DEFAULT_BASE_URL = "http://localhost:8550"
@@ -75,8 +75,10 @@ DEFAULT_BASE_URL = "http://localhost:8550"
 # has to keep working. A fork adds its own paths here in the same change that
 # marks them hidden.
 HIDDEN_DOC_PATHS = (
+    # This fork's real hidden page — pages/control_board.py calls
+    # mark_hidden() on it, so the canary above became a census.
+    "/admin/control-board/llms.txt",
     "/admin/llms.txt",
-    "/analytics/llms.txt",
 )
 
 # The hub one level up the chain. A satellite's llms.txt must name it — that

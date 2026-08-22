@@ -24,7 +24,7 @@ INDEX_HTML_LIVE = re.sub(r"<!--.*?-->", "", INDEX_HTML, flags=re.S)
 
 
 def test_default_base_url_is_the_public_domain():
-    assert constants.DEFAULT_BASE_URL == "https://boilerplate.2plot.dev"
+    assert constants.DEFAULT_BASE_URL == "https://llms.2plot.dev"
     assert not constants.DEFAULT_BASE_URL.endswith("/")
 
 

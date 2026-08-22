@@ -93,7 +93,7 @@ LLMS_PKG_FLOOR = (2, 6, 1)
 # env value (Render dashboard, .env — loaded by lib/backend before
 # this runs on import chains that need it) always wins; this line only
 # closes the unset gap. FORKS CHANGE THIS ONE STRING.
-os.environ.setdefault("SATELLITE_APP_KEY", "boilerplate")
+os.environ.setdefault("SATELLITE_APP_KEY", "llms")
 
 # Analytics tracking
 from lib.analytics_tracker import tracker

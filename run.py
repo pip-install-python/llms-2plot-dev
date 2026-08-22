@@ -490,6 +490,75 @@ configure_seo(
 #     mark_hidden("/admin")
 
 # ============================================================================
+# Retired URLs from the old dash-hook-my-ai service — 301, not 404.
+#
+# This site replaces a service whose pages are in Google's index, in other
+# sites' links, and in the training data of every model that has read the
+# network. A 404 throws that away; a 301 hands the accumulated authority to
+# the page that replaced it. The /audiences/* URLs are preserved BYTE FOR
+# BYTE elsewhere in this file's page tree precisely so that most of the old
+# surface needs no redirect at all — this list is only what genuinely moved.
+#
+# Mounted BEFORE add_llms_routes so the package's `/<page>/llms.txt`
+# catch-all cannot shadow them, and registered per backend because Flask and
+# Starlette disagree about everything except the status code.
+# ============================================================================
+
+RETIRED_URLS = {
+    # networks.py folded into Showcase C's live network section
+    "/networks-old": "/showcase/policy-panel",
+    # analytics.py + admin.py retire with the old service. The hub's /traffic
+    # board replaced the first; the control board replaced the second, and
+    # ADMIN_DASH_TOKEN dies with them (the archived KICKOFF-llms.md addendum
+    # is superseded at cutover — do not resurrect the visitor dashboard).
+    "/analytics": "/showcase/policy-panel",
+    "/admin": "/admin/control-board",
+    # v200_features.py retired everywhere
+    "/v200-features": "/",
+    # the old service's audience pages lived one level up
+    "/mcp-clients": "/audiences/mcp-clients",
+    "/web-crawlers": "/audiences/web-crawlers",
+    "/llm-context": "/audiences/llm-context",
+}
+
+
+def _register_redirects(dash_app, backend, routes):
+    """301 every retired URL at its replacement, on whichever backend."""
+    if backend == "fastapi":
+        from starlette.responses import RedirectResponse
+
+        def _make(target):
+            async def _redirect(_request):
+                return RedirectResponse(target, status_code=301)
+
+            return _redirect
+
+        for source, target in routes.items():
+            dash_app.server.add_route(source, _make(target), methods=["GET", "HEAD"])
+        return
+
+    from flask import redirect as _flask_redirect
+
+    def _make(target):
+        def _redirect():
+            return _flask_redirect(target, code=301)
+
+        return _redirect
+
+    for source, target in routes.items():
+        # endpoint= is required: Flask keys view functions by name and every
+        # closure here is called `_redirect`, so without it the second route
+        # raises "View function mapping is overwriting an existing endpoint".
+        dash_app.server.add_url_rule(
+            source, endpoint=f"retired{source.replace('/', '_')}",
+            view_func=_make(target), methods=["GET", "HEAD"],
+        )
+
+
+_register_redirects(app, BACKEND, RETIRED_URLS)
+print(f"[llms] retired URLs: {len(RETIRED_URLS)} permanent redirect(s) mounted")
+
+# ============================================================================
 # FastAPI showcase routes (only when running on FastAPI).
 # These are NOT the AI/LLM endpoints — those are handled by add_llms_routes
 # below. They are a small native API surface (`/healthz`, `/api/backend`,

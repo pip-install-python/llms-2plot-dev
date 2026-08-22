@@ -3,6 +3,17 @@ from dash_iconify import DashIconify
 
 from lib.constants import HEADER_HEIGHT
 
+# Paths the sidebar never renders. TWO groups, and the second is the one a
+# wave sync must not "clean up":
+#
+#   1. the template's own placeholders (/404 and friends);
+#   2. THIS FORK'S HIDDEN INHERITANCE. The boilerplate's tutorial pages are
+#      kept on disk, registered, crawlable and reachable by URL — they are
+#      simply not advertised in this site's navigation, because this site
+#      documents a package rather than teaching the template. Deleting them
+#      would fork the file tree away from the template and make every future
+#      wave sync a merge conflict; hiding them costs one line each and keeps
+#      the sync a fast-forward. Do not delete the docs/ directories.
 excluded_links = [
     "/404",
     "/styles-api",
@@ -10,7 +21,40 @@ excluded_links = [
     "/dash-iconify",
     "/migration",
     "/learning-resources",
+    # --- inherited boilerplate TUTORIAL pages (kept, not advertised) ---
+    # These teach the template: how to write a docs page, which directives
+    # exist, how the backends compare. Real material, wrong site.
+    "/getting-started",
+    "/examples/directives",
+    "/examples/interactive",
+    "/examples/visualization",
+    "/backends",
+    "/backend-comparison",
+    "/fastapi-showcase",
 ]
+# Deliberately NOT excluded, because they are about this site's own subject:
+#   /examples/ai-integration  — the package these docs document
+#   /networks, /network-standard — the federation this host is part of
+#   /authentication — the gate the control board sits behind
+
+# The two clusters this site leads with, in order, ahead of the inherited
+# documentation. Endpoints rather than names: a page's display name can be
+# edited in frontmatter without anyone thinking about the navbar.
+PACKAGE_LINKS = [
+    ("/audiences/mcp-clients", "MCP Clients", "tabler:plug-connected"),
+    ("/audiences/web-crawlers", "Web Crawlers", "tabler:robot"),
+    ("/audiences/llm-context", "Paste-to-Chat", "tabler:message-2-code"),
+]
+
+SHOWCASE_LINKS = [
+    ("/audiences/web-crawlers", "A · What the crawler sees", "tabler:eye-code"),
+    ("/showcase/robots-sandbox", "B · Bot policy sandbox", "tabler:adjustments-alt"),
+    ("/showcase/policy-panel", "C · Policy panel", "tabler:shield-lock"),
+]
+
+# Rendered in their own clusters above, so the generic Documentation list
+# must not repeat them.
+_CLUSTERED = {path for path, _label, _icon in PACKAGE_LINKS + SHOWCASE_LINKS}
 
 
 def create_nav_link(icon, text, href, external=False):
@@ -69,7 +113,9 @@ def create_content(data):
     # Create a mapping of page names to their links
     page_dict = {}
     for entry in data:
-        if entry["path"] not in excluded_links and entry["path"] != "/":
+        if (entry["path"] not in excluded_links
+                and entry["path"] not in _CLUSTERED
+                and entry["path"] != "/"):
             link = create_nav_link(
                 entry.get("icon", "fluent:document-24-regular"),
                 entry["name"],
@@ -101,8 +147,26 @@ def create_content(data):
                     "/"
                 ),
 
-                # Documentation Pages Section
+                # This site's own subject, first: the three audiences the
+                # package serves, then the three live showcases. Both sit
+                # ABOVE the inherited Documentation list, which is the
+                # template's material rather than this site's.
                 dmc.Divider(mt="xs", mb="xs"),
+                create_nav_section(
+                    "This package",
+                    [create_nav_link(icon, label, path)
+                     for path, label, icon in PACKAGE_LINKS],
+                ),
+
+                dmc.Divider(mt="md", mb="sm"),
+                create_nav_section(
+                    "Showcase",
+                    [create_nav_link(icon, label, path)
+                     for path, label, icon in SHOWCASE_LINKS],
+                ),
+
+                # Documentation Pages Section
+                dmc.Divider(mt="md", mb="sm"),
                 create_nav_section(
                     "Documentation",
                     page_links

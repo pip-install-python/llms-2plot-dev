@@ -214,3 +214,93 @@ def test_the_policy_panel_is_read_only():
             f"Showcase C calls {writer}() — it is a public, ungated page and "
             "must never write policy"
         )
+
+
+# ---------------------------------------------------------------------------
+# The callbacks actually run
+# ---------------------------------------------------------------------------
+# A showcase page returns 200 whether or not its callbacks work — the shell is
+# served before any of them fire, and a raising callback surfaces only as an
+# error toast in a browser nobody is watching. These invoke them directly.
+
+
+@pytest.fixture
+def showcase_modules(app_module):
+    """Import the exec modules against the fully booted app."""
+    import importlib
+
+    return {
+        "mcp": importlib.import_module("docs.mcp_clients.mcp_registry"),
+        "crawler": importlib.import_module("docs.crawler_view.crawler_view"),
+        "sandbox": importlib.import_module("docs.robots_sandbox.robots_sandbox"),
+        "panel": importlib.import_module("docs.policy_panel.policy_panel"),
+    }
+
+
+def test_the_mcp_registry_populates_from_the_live_registry(showcase_modules):
+    options, value = showcase_modules["mcp"]._populate(1)
+    assert len(options) > 5, f"only {len(options)} pages — an import-time walk?"
+    assert value
+    assert not any(o["value"].startswith("/admin/") for o in options), (
+        "the hidden control board is offered as an MCP resource"
+    )
+
+
+def test_the_mcp_registry_describes_a_page(showcase_modules):
+    uri, hint, body = showcase_modules["mcp"]._describe("/audiences/mcp-clients", False)
+    assert uri.endswith("/audiences/mcp-clients/llms.txt")
+    assert hint and body is not None
+
+
+@pytest.mark.parametrize("user_agent", [
+    "Mozilla/5.0 (Macintosh) Chrome/120.0.0.0", "ClaudeBot/1.0", "GPTBot/1.1",
+    "Googlebot/2.1", "PerplexityBot/1.0",
+])
+def test_showcase_a_renders_for_every_audience(showcase_modules, user_agent):
+    verdict, rendered, source, headers = showcase_modules["crawler"]._show("/", user_agent)
+    assert verdict is not None, f"no verdict card for {user_agent}"
+    assert rendered is not None, f"no rendered panel for {user_agent}"
+
+
+def test_showcase_a_shows_the_403_for_a_blocked_crawler(showcase_modules):
+    verdict, rendered, _source, _headers = showcase_modules["crawler"]._show(
+        "/", "ClaudeBot/1.0")
+    assert "403" in str(rendered), (
+        "a blocked training crawler's panel does not show the 403 it would get"
+    )
+
+
+@pytest.mark.parametrize("args", [
+    (True, True, True, False, 10, None, "block"),
+    (True, True, True, False, 10, "googlebot", "block"),
+    (False, False, False, True, 0, "claudebot", "meter"),
+])
+def test_showcase_b_renders_every_switch_combination(showcase_modules, args):
+    robots_panel, verdicts = showcase_modules["sandbox"]._render(*args)
+    assert robots_panel is not None and verdicts is not None
+
+
+def test_showcase_c_reports_live_policy(showcase_modules):
+    summary, figure, detail = showcase_modules["panel"]._policy(1)
+    assert summary is not None
+    assert figure["data"][0]["type"] == "choropleth"
+    assert detail is not None
+
+
+@pytest.mark.parametrize("audience", ["human", "search", "training", "traditional"])
+@pytest.mark.parametrize("country", ["", "DE", "RU"])
+def test_showcase_c_simulates_every_combination(showcase_modules, audience, country):
+    assert showcase_modules["panel"]._simulate("/", audience, country) is not None
+
+
+def test_showcase_c_simulator_reports_451_for_a_denied_country(showcase_modules):
+    from lib import policy_store
+
+    try:
+        policy_store.set_geo_deny(["RU"])
+        rendered = str(showcase_modules["panel"]._simulate("/", "human", "RU"))
+        assert "451" in rendered, (
+            "the simulator does not report the 451 a denied country gets"
+        )
+    finally:
+        policy_store.set_geo_deny([])

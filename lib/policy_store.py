@@ -136,16 +136,55 @@ def _clean_deny(raw: Any) -> list[str]:
     return sorted(seen)
 
 
+def known_vendors() -> dict[str, str]:
+    """``{registry key: display name}`` from the package, or ``{}``.
+
+    Best-effort by design: the registry is a 2.7.0 surface, and this module
+    has to keep importing on the 2.6.1 floor requirements.txt still pins.
+    """
+    try:
+        from dash_improve_my_llms.vendors import VENDORS
+
+        return {v.key: v.display for v in VENDORS}
+    except Exception:
+        return {}
+
+
+def normalize_vendor(name: Any) -> str | None:
+    """``"ClaudeBot"`` / ``"claudebot"`` -> the registry KEY, or None.
+
+    The package's ``vendor_policy`` map is keyed on the registry key, and an
+    unrecognised key is logged and IGNORED — so a board that stored the
+    display name would show an override that quietly does nothing. Same
+    reasoning as :func:`normalize_country`: refuse at the write, because the
+    write is the only place the operator finds out.
+    """
+    if not isinstance(name, str) or not name.strip():
+        return None
+    candidate = name.strip().lower()
+    registry = known_vendors()
+    if not registry:
+        return candidate  # pre-2.7.0: nothing to validate against
+    if candidate in registry:
+        return candidate
+    # Accept a display name too — it is what the board's table shows.
+    for key, display in registry.items():
+        if display.lower() == candidate:
+            return key
+    return None
+
+
 def _clean_vendor_policy(raw: Any) -> dict[str, str]:
     if not isinstance(raw, dict):
         return {}
     out: dict[str, str] = {}
     for name, action in raw.items():
-        if not isinstance(name, str) or not name.strip():
+        key = normalize_vendor(name)
+        if key is None:
             continue
         if not isinstance(action, str) or action.lower() not in VENDOR_ACTIONS:
             continue
-        out[name.strip()] = action.lower()
+        out[key] = action.lower()
     return out
 
 
@@ -331,15 +370,20 @@ def set_geo_unknown(posture: str) -> str:
 
 def set_vendor_action(vendor: str, action: str) -> dict[str, str]:
     """Set one vendor's policy. ``action='allow'`` removes the override."""
-    vendor = (vendor or "").strip()
-    if not vendor:
-        raise ValueError("vendor name is required")
+    key = normalize_vendor(vendor)
+    if key is None:
+        raise ValueError(
+            f"{vendor!r} is not a known bot vendor. The package keys "
+            "vendor_policy on its registry key and IGNORES anything else "
+            "with a log line, so this override would silently do nothing. "
+            f"Known: {', '.join(sorted(known_vendors())) or '(registry unavailable)'}"
+        )
     if action not in VENDOR_ACTIONS:
         raise ValueError(f"action must be one of {VENDOR_ACTIONS}")
 
     def mutate(doc):
         current = _clean_vendor_policy(doc.get(_VENDOR_POLICY))
-        current[vendor] = action
+        current[key] = action
         doc[_VENDOR_POLICY] = current
 
     _write(mutate)
@@ -347,9 +391,11 @@ def set_vendor_action(vendor: str, action: str) -> dict[str, str]:
 
 
 def clear_vendor_action(vendor: str) -> dict[str, str]:
+    key = normalize_vendor(vendor)
+
     def mutate(doc):
         current = _clean_vendor_policy(doc.get(_VENDOR_POLICY))
-        current.pop((vendor or "").strip(), None)
+        current.pop(key or (vendor or "").strip(), None)
         doc[_VENDOR_POLICY] = current
 
     _write(mutate)

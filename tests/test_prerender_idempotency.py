@@ -148,7 +148,26 @@ _SUBPROCESS = textwrap.dedent(
     sys.modules["runmod"] = m
     with contextlib.redirect_stdout(io.StringIO()):
         spec.loader.exec_module(m)
-    body = m.app.server.test_client().get("/", headers={{"User-Agent": {ua!r}}}).get_data().decode()
+    # The subprocess inherits DASH_BACKEND, so it must reconcile the three
+    # clients the same way tests/conftest.py does. FastAPI and Quart need the
+    # ASGI lifespan to have run: Dash registers its page catch-all from the
+    # startup event, so a client used outside the lifespan 404s every URL.
+    from lib.backend import resolve_backend
+    kind = resolve_backend()
+    headers = {{"User-Agent": {ua!r}}}
+    if kind == "fastapi":
+        from starlette.testclient import TestClient
+        with TestClient(m.app.server) as raw:
+            body = raw.get("/", headers=headers).text
+    elif kind == "quart":
+        import asyncio
+        async def _fetch():
+            client = m.app.server.test_client()
+            r = await client.get("/", headers=headers)
+            return (await r.get_data()).decode()
+        body = asyncio.new_event_loop().run_until_complete(_fetch())
+    else:
+        body = m.app.server.test_client().get("/", headers=headers).get_data().decode()
     print(json.dumps({{
         "has_probe": {probe!r} in body,
         "has_main": "<main>" in body,

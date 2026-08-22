@@ -20,6 +20,8 @@ from pathlib import Path
 
 import pytest
 
+from conftest import requires_dimll_27
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 SHOWCASE_MODULES = {
@@ -262,7 +264,11 @@ def test_showcase_a_renders_for_every_audience(showcase_modules, user_agent):
     assert rendered is not None, f"no rendered panel for {user_agent}"
 
 
+@requires_dimll_27
 def test_showcase_a_shows_the_403_for_a_blocked_crawler(showcase_modules):
+    """2.7.0-only: ClaudeBot classifies `training` from 2.7.0 on (the W1
+    contract change). On 2.6.1 it is `search`, so the showcase correctly
+    shows no block and this assertion would be wrong rather than failing."""
     verdict, rendered, _source, _headers = showcase_modules["crawler"]._show(
         "/", "ClaudeBot/1.0")
     assert "403" in str(rendered), (

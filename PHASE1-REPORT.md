@@ -231,6 +231,24 @@ subprocess.
   publishes, move the floor, raise `LLMS_PKG_FLOOR`, and the whole block
   collapses to a plain import.
 
+  **This degrade is proved, not assumed.** An earlier draft of this report
+  claimed the app still booted on the pinned floor; installing 2.6.1 and
+  trying it showed otherwise — the three showcase modules imported the 2.7.0
+  `vendors` registry at LAYOUT time, so the ImportError took down the whole
+  app at boot rather than degrading one page. Fixed, and the claim is now
+  backed by a run:
+
+  | Installed | Flask | FastAPI |
+  |---|---|---|
+  | 2.6.1 (the pinned floor) | 401 passed, 195 skipped | 398 passed, 198 skipped |
+  | 2.7.0 (the pre-release wheel) | 587 passed, 1 skipped, 8 xfailed | 584 passed, 4 skipped, 8 xfailed |
+
+  On 2.6.1 the app boots, every page serves, and the two `[llms] WARNING`
+  lines say exactly which features are not wired. The 2.7.0-only test modules
+  carry `pytestmark = requires_dimll_27` — a capability probe matching
+  run.py's — so they SKIP on the floor instead of failing. A red suite on the
+  pinned floor would train everyone to ignore it.
+
 **Deliberately not built:**
 
 - The bot × country matrix. Recorded by the addendum as the first 2.8 item.

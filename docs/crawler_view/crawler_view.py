@@ -31,22 +31,36 @@ _CLASS_COLOR = {"training": "red", "search": "teal", "traditional": "blue"}
 
 
 def _ua_options():
-    """Real UA tokens from the package registry, grouped by class.
+    """Real UA tokens grouped by class, from whichever API this build has.
 
-    Built at layout time from `bot_detection`, so a vendor added to the
-    registry appears here without this file changing.
+    `vendors` is a 2.7.0 module and this repo still floors on 2.6.1 (see
+    run.py's LLMS_HAS_27 block), so the richer registry is used when it is
+    there and the 2.6.x token lists when it is not. This runs at LAYOUT time,
+    which is why it cannot simply assume the newer API: an ImportError here
+    takes down the whole app at boot, not just this showcase.
     """
-    from dash_improve_my_llms.vendors import VENDORS
-
     groups = {"training": [], "search": [], "traditional": []}
-    for vendor in VENDORS:
-        # Not every vendor publishes a robots token: `anthropic-legacy` is a
-        # UA-only identity (anthropic-ai, claude-web) with an empty
-        # robots_tokens tuple, so fall back to what the middleware matches on.
-        token = (vendor.robots_tokens or vendor.ua_tokens or (vendor.key,))[0]
-        groups.setdefault(vendor.cls, []).append(
-            {"value": f"{token}/1.0", "label": f"{vendor.display} — {vendor.operator}"}
-        )
+    try:
+        from dash_improve_my_llms.vendors import VENDORS
+
+        for vendor in VENDORS:
+            # Not every vendor publishes a robots token: `anthropic-legacy` is
+            # a UA-only identity (anthropic-ai, claude-web) with an empty
+            # robots_tokens tuple, so fall back to what the middleware
+            # matches on.
+            token = (vendor.robots_tokens or vendor.ua_tokens or (vendor.key,))[0]
+            groups.setdefault(vendor.cls, []).append(
+                {"value": f"{token}/1.0",
+                 "label": f"{vendor.display} — {vendor.operator}"}
+            )
+    except ImportError:  # pre-2.7.0: the flat token lists, no operator names
+        from dash_improve_my_llms import bot_detection
+
+        for cls, tokens in (("training", bot_detection.AI_TRAINING_BOTS),
+                            ("search", bot_detection.AI_SEARCH_BOTS),
+                            ("traditional", bot_detection.TRADITIONAL_BOTS)):
+            for token in tokens:
+                groups[cls].append({"value": f"{token}/1.0", "label": token})
 
     data = [{"group": "A human's browser",
              "items": [{"value": BROWSER_UA, "label": "Chrome 120 (a person)"}]}]
@@ -140,24 +154,29 @@ def _show(path, user_agent):
     if not path or not user_agent:
         return None, None, None, None
 
-    from dash_improve_my_llms.bot_detection import get_bot_type, get_bot_vendor, is_any_bot
-    from dash_improve_my_llms.vendors import VENDORS, effective_policies
-
     import dash
 
+    from dash_improve_my_llms.bot_detection import get_bot_type, is_any_bot
+
     is_bot = is_any_bot(user_agent)
-    vendor_key = get_bot_vendor(user_agent)
-    vendor = next((v for v in VENDORS if v.key == vendor_key), None)
     bot_class = get_bot_type(user_agent) if is_bot else "human"
 
-    policy = "allow"
-    if vendor is not None:
-        try:
-            policy = effective_policies(getattr(dash.get_app(), "_robots_config", None))[
-                vendor.key
-            ]
-        except Exception:
-            policy = "allow"
+    # Same 2.6.1 degrade as _ua_options: without the registry there is no
+    # vendor identity and no per-vendor fold, so the class defaults stand in.
+    vendor, policy = None, "allow"
+    try:
+        from dash_improve_my_llms.bot_detection import get_bot_vendor
+        from dash_improve_my_llms.vendors import VENDORS, effective_policies
+
+        vendor = next((v for v in VENDORS if v.key == get_bot_vendor(user_agent)), None)
+        if vendor is not None:
+            policy = effective_policies(
+                getattr(dash.get_app(), "_robots_config", None)
+            )[vendor.key]
+    except ImportError:
+        policy = "block" if bot_class == "training" else "allow"
+    except Exception:
+        policy = "allow"
 
     verdict = _verdict_card(is_bot, vendor, bot_class, policy)
 

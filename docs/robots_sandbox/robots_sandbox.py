@@ -21,8 +21,16 @@ _POLICY_COLOR = {"allow": "teal", "block": "red", "meter": "yellow"}
 
 
 def _vendor_rows():
-    from dash_improve_my_llms.vendors import VENDORS
+    """(key, display, operator, class) per vendor — [] before 2.7.0.
 
+    Runs at LAYOUT time, so an ImportError here would take down the app at
+    boot rather than degrading this one showcase. See run.py's LLMS_HAS_27
+    block: this repo still floors on 2.6.1 on purpose.
+    """
+    try:
+        from dash_improve_my_llms.vendors import VENDORS
+    except ImportError:
+        return []
     return [(v.key, v.display, v.operator, v.cls) for v in VENDORS]
 
 
@@ -113,20 +121,25 @@ component = html.Div(
 def _render(training, search, traditional, docs, delay, vendor, action):
     from dash_improve_my_llms import RobotsConfig
     from dash_improve_my_llms.robots_generator import generate_robots_txt
-    from dash_improve_my_llms.vendors import VENDORS, effective_policies
 
     # THROWAWAY. Never assigned to the app — see this module's docstring.
-    config = RobotsConfig(
+    kwargs = dict(
         block_ai_training=bool(training),
         allow_ai_search=bool(search),
         allow_traditional=bool(traditional),
-        block_ai_training_docs=bool(docs),
         crawl_delay=int(delay) if delay else None,
-        vendor_policy={vendor: action} if vendor else None,
     )
+    try:
+        from dash_improve_my_llms.vendors import effective_policies
 
+        kwargs["block_ai_training_docs"] = bool(docs)
+        kwargs["vendor_policy"] = {vendor: action} if vendor else None
+    except ImportError:  # pre-2.7.0: neither keyword exists
+        effective_policies = None
+
+    config = RobotsConfig(**kwargs)
     robots = generate_robots_txt(sitemap_url=SITEMAP, base_url=BASE_URL, config=config)
-    policies = effective_policies(config)
+    policies = effective_policies(config) if effective_policies else {}
 
     robots_panel = dmc.Paper(
         dmc.Code(robots, block=True,

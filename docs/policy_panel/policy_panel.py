@@ -122,9 +122,13 @@ def _policy(_tick):
 def _summary_cards(denied):
     import dash
     from dash_improve_my_llms import __version__ as pkg_version
-    from dash_improve_my_llms.vendors import effective_policies
 
     try:
+        # `vendors` is 2.7.0; this repo still floors on 2.6.1 (run.py's
+        # LLMS_HAS_27 block), so the fold is optional and its absence shows
+        # as zero rather than an error toast.
+        from dash_improve_my_llms.vendors import effective_policies
+
         policies = effective_policies(getattr(dash.get_app(), "_robots_config", None))
     except Exception:
         policies = {}
@@ -252,9 +256,10 @@ def _simulate(path, audience, country):
 
 def _policy_for_class(ua_class):
     import dash
-    from dash_improve_my_llms.vendors import VENDORS, effective_policies
 
     try:
+        from dash_improve_my_llms.vendors import VENDORS, effective_policies
+
         policies = effective_policies(getattr(dash.get_app(), "_robots_config", None))
     except Exception:
         return "allow"

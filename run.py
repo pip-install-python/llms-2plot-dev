@@ -203,6 +203,76 @@ except ImportError:  # pragma: no cover — ALLOW_STALE_DEPS with a pre-2.5.0 pa
             "package) — crawler identity tags and root icons not emitted."
         )
 
+# ----------------------------------------------------------------------------
+# The 2.7.0 surface: the geo guardrail, the operator panel, per-vendor policy
+# and the rate ceiling. Same post-floor pattern as configure_seo above, and
+# for a sharper reason: requirements.txt still floors at 2.6.1 ON PURPOSE
+# (2.7.0 is not on PyPI yet), so this app has to keep booting on the pinned
+# floor while the code is written against the newer one. Every 2.7.0 call
+# below is guarded by LLMS_HAS_27 rather than by a version comparison —
+# capability, not number, so a partial backport or a yanked release cannot
+# make the guard lie.
+#
+# WHEN 2.7.0 PUBLISHES: move the requirements.txt floor to >=2.7.0, raise
+# LLMS_PKG_FLOOR, and this whole block collapses to a plain import. Until
+# then the degrade is load-bearing and tests/test_runtime_imports.py keeps
+# it honest.
+try:
+    from dash_improve_my_llms import configure_geo, geo as _geo  # noqa: E402
+
+    LLMS_HAS_27 = True
+except ImportError:  # pragma: no cover — the pinned 2.6.1 floor
+    LLMS_HAS_27 = False
+    _geo = None
+
+    def configure_geo(**_kwargs) -> None:
+        print(
+            "[llms] WARNING: configure_geo unavailable (pre-2.7.0 package) — "
+            "the country guardrail is not wired. The control board's geo "
+            "section will say so rather than pretending to block."
+        )
+
+
+def _llms_config_27(**kwargs):
+    """`LLMSConfig` with the 2.7.0-only keywords, when they exist.
+
+    `panel=` and `rate_limit_per_minute=` are positional-or-keyword arguments
+    on 2.7.0 and simply absent on 2.6.1, where passing them is a TypeError at
+    boot rather than a degraded feature. Filtering against the real signature
+    keeps one call site for both.
+    """
+    import inspect
+
+    accepted = inspect.signature(LLMSConfig.__init__).parameters
+    unsupported = [k for k in kwargs if k not in accepted]
+    for key in unsupported:
+        kwargs.pop(key)
+    if unsupported:
+        print(
+            "[llms] WARNING: this dash-improve-my-llms build does not accept "
+            f"{', '.join(sorted(unsupported))} — feature(s) not wired."
+        )
+    return LLMSConfig(**kwargs)
+
+
+def _rate_ceiling():
+    """`LLMS_RATE_LIMIT_PER_MINUTE`, or None for the unlimited default.
+
+    W4 is per-process: N gunicorn workers mean N x this ceiling in aggregate.
+    Documented in the package, restated here because the number an operator
+    types on the board is not the number the origin enforces.
+    """
+    raw = (os.environ.get("LLMS_RATE_LIMIT_PER_MINUTE") or "").strip()
+    if not raw:
+        return None
+    try:
+        value = int(raw)
+    except ValueError:
+        print(f"[llms] WARNING: LLMS_RATE_LIMIT_PER_MINUTE={raw!r} is not an "
+              "integer — no rate ceiling applied.")
+        return None
+    return value if value > 0 else None
+
 if DASH_VERSION < (4, 4):
     # Fatal only on FastAPI, where it is not a degradation but an outage:
     # 4.3.0's ASGI middleware returns before setting the request context, so
@@ -322,6 +392,14 @@ app._base_url = BASE_URL
 # lib/network_directory.py — one definition, imported by every satellite.
 network_directory.apply(BASE_URL)
 
+# The writable policy store — this site's half of the 2.7.0 callable seam.
+# Imported here rather than at the top because it must come after .env is
+# loaded (lib/backend.py does that on import) or POLICY_STORE_FILE from a
+# developer's .env would be read too late to matter.
+from lib import policy_store as _policy_store  # noqa: E402
+
+_policy_store.persistence_warning()
+
 # Configure bot management policies — the balanced default this project
 # documents: block training crawlers, allow AI search citations and
 # traditional search. As of dash-improve-my-llms 2.3.3 the buckets are
@@ -330,12 +408,20 @@ network_directory.apply(BASE_URL)
 # Claude-SearchBot are allowed alongside ChatGPT-User / OAI-SearchBot /
 # PerplexityBot. With block_ai_training=False the training bucket is never
 # emitted at all, which silently allows training — not "balanced".
+#
+# 2.7.0 adds `vendor_policy=`, and this fork passes the CALLABLE form: the
+# package re-reads it on every robots.txt render AND on every middleware
+# decision, so the control board's per-vendor overrides apply without a
+# restart. An empty store is a strict no-op — the class defaults above still
+# describe what is served — which is what lets the seam sit live from boot
+# instead of needing a redeploy the day an override is first wanted.
 app._robots_config = RobotsConfig(
     block_ai_training=True,       # Disallow GPTBot, ClaudeBot, CCBot, etc.
     allow_ai_search=True,         # Allow Claude-User/-SearchBot, ChatGPT-User, ...
     allow_traditional=True,       # Allow Googlebot, Bingbot, etc.
     crawl_delay=10,
     disallowed_paths=[],
+    **({"vendor_policy": _policy_store.vendor_policy} if LLMS_HAS_27 else {}),
 )
 
 # ============================================================================
@@ -547,7 +633,64 @@ ACCESS_ENABLED = _access.configure(
 # the Markdown byte for byte, browsers get it rendered behind the network
 # header. `?raw=1` and `?format=html` force either side, and both variants
 # send `Vary: Accept` so a CDN cannot hand cached HTML to the next agent.
-add_llms_routes(app, LLMSConfig(warn_missing_llms_doc=True))
+# ============================================================================
+# The country guardrail (dash-improve-my-llms 2.7.0 — docs/GEO.md).
+#
+# Wired UNCONDITIONALLY, with the callable form. Three reasons it is not
+# behind an `if`:
+#
+#   1. An empty denylist is a strict no-op — every response is byte-identical
+#      to a build that never calls this. The inherited 322-test suite runs
+#      with the seam live and proves it.
+#   2. The seam's whole promise is "no restart". Gating the CALL on a env var
+#      would mean the first country the owner ever blocks costs a redeploy,
+#      which is the problem the callable exists to solve.
+#   3. `deny_countries=` validates a STATIC list at config time and raises;
+#      the callable form cannot, so the store validates on write instead
+#      (lib/policy_store.normalize_country) and this line can never raise at
+#      boot on a bad stored value.
+#
+# `unknown=` is NOT a seam — the package reads it once, here — so the board
+# labels it "applies at next deploy" rather than pretending otherwise.
+#
+# THE TRUST MODEL, restated because it is easy to lose: the country comes
+# from an edge header. Behind Cloudflare CF-IPCountry is trustworthy and
+# client copies are stripped; a client that reaches this origin directly can
+# say anything. This is a compliance guardrail, not a security boundary — if
+# the block matters adversarially, add the Cloudflare country WAF rule too.
+# The per-host check is the panel's "resolved to X via <header>" line, and
+# on a DNS-only host every request resolves "unknown" and this ships inert.
+configure_geo(
+    deny_countries=_policy_store.geo_deny,
+    unknown=_policy_store.geo_unknown(),
+    # EXACT-match paths only. /healthz is what the hub's hourly sweep probes;
+    # without the exemption a geo-blocked country's health check would 451
+    # and the network health panel would report this host down.
+    exempt_paths=("/healthz", "/health", "/livez", "/readyz"),
+    policy_url=os.environ.get("GEO_POLICY_URL", ""),
+)
+
+if LLMS_HAS_27:
+    _geo_policy = _geo.effective_policy()
+    print(
+        f"[llms] geo guardrail: {len(_geo_policy['deny_countries'])} "
+        f"country(ies) denied via {_geo_policy['denylist_source']}, unknown="
+        f"{_geo_policy['unknown']} — store {_policy_store.path()}"
+    )
+
+# Wire up the package: /llms.txt, /<page>/llms.txt, /robots.txt, /sitemap.xml,
+# bot-detection middleware, and (on Dash 4.3+) MCP resource registration.
+#
+# panel=True unconditionally, and it is not a leak: with no token the panel
+# 404s for everyone (docs/PANEL.md), and the token is read PER REQUEST from
+# DIMLL_PANEL_TOKEN — so an operator can rotate or revoke it live. Register
+# it only when the token happens to be set at boot and that promise breaks:
+# turning the panel on would cost a redeploy, which is when nobody does it.
+add_llms_routes(app, _llms_config_27(
+    warn_missing_llms_doc=True,
+    panel=True,
+    rate_limit_per_minute=_rate_ceiling(),
+))
 
 # ============================================================================
 

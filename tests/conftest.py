@@ -59,6 +59,12 @@ os.environ["TRAFFIC_ANALYTICS_FILE"] = os.path.join(_TMP_STATE, "visitor_analyti
 # Same reason for the control board's override store — and pointing it at a
 # tmp path also keeps the import-time [visibility] boot warning quiet.
 os.environ["PAGE_VISIBILITY_FILE"] = os.path.join(_TMP_STATE, "page_visibility.json")
+# Same for the geo/vendor policy store (lib/policy_store.py). Pointing it at a
+# tmp path keeps the [policy] boot warning quiet AND keeps the suite's default
+# posture UNCONFIGURED: an empty store means an empty denylist, which is the
+# state the whole inherited suite asserts is byte-identical to a build with no
+# guardrail at all.
+os.environ["POLICY_STORE_FILE"] = os.path.join(_TMP_STATE, "policy_overrides.json")
 # Behind Cloudflare in production; in tests an outbound ip-api.com lookup per
 # hit would make the suite depend on a third party being up.
 os.environ["ANALYTICS_GEO_LOOKUP"] = "0"

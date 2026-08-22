@@ -66,5 +66,5 @@ from dash_improve_my_llms.vendors import effective_policies
 effective_policies(app._robots_config)   # {'gptbot': 'block', 'googlebot': 'allow', ...}
 ```
 
-The read-only [operator panel](/llms-policy) renders its vendor table from
-this same call, which is why it cannot drift from `robots.txt`.
+The package's read-only operator panel (`/llms-policy`) renders its vendor
+table from this same call, which is why it cannot drift from `robots.txt`.

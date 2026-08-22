@@ -51,8 +51,8 @@ configure_geo(deny_countries=policy_store.geo_deny)
 ```
 
 That is the 2.7.0 seam, and it is the whole reason this site can have a
-control board at all. The package's own [operator panel](/llms-policy) is
-read-only by decision: package config is per-process module state, so under
+control board at all. The package's own operator panel (`/llms-policy`, token-gated and 404 to
+everyone without the token) is read-only by decision: package config is per-process module state, so under
 N gunicorn workers a *mutating* panel would change one worker and lie on the
 next refresh. Routing every write through a file the workers re-read per
 request dissolves that problem — and that is what

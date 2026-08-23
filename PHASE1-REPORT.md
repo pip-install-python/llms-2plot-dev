@@ -288,11 +288,10 @@ subprocess.
   Partially compensated: every showcase callback is invoked directly by
   `test_showcase.py`, so a raising callback cannot hide behind a 200 — but
   nothing here has rendered in a real browser.
-- The social card. `OG_IMAGE_URL` points at
-  `cdn.2plot.ai/github_assets/llms.2plot.dev.png`, which **does not exist
-  yet**. `scripts/make_social_card.py` renders it and the upload to the
-  Cloudflare bucket is manual. Until that object is there, every share of
-  this site unfurls without an image.
+- ~~The social card.~~ **Done, 2026-08-23.**
+  `cdn.2plot.ai/github_assets/llms.2plot.dev.png` is live at 1200x630. The
+  home page's hero now renders from the same `OG_IMAGE_URL` constant, so the
+  page and its share preview cannot drift to different artwork.
 - `render.yaml` still carries the template's service name and no
   `POLICY_STORE_FILE` disk entry — deliberately, since the service does not
   exist and inventing its shape now would be guessing.

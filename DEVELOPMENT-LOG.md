@@ -305,3 +305,92 @@ anywhere in the suite.**
 
 The soak is closed. Five findings, all fixed and verified from the
 application side, on the seam a package suite structurally cannot reach.
+
+---
+
+## 9. Phase B — to production, part 1 (2026-08-23)
+
+dimll shipped, so the migration's production half opened: floor bump →
+workflow audit → inaugural push. Stops at the owner gate; no service
+creation, no cutover.
+
+### The floor is 2.7.1, not 2.7.0
+
+Checked PyPI at execution time as instructed. The first check showed 2.7.0
+(uploaded 17:48:38Z) and **no 2.7.1**. The clean install minutes later
+resolved **2.7.1** — the fast-follow landed at 18:24:03Z, *between* the check
+and the install. Re-verified and floored on the later one, per the rule that
+the fleet's floor round happens once.
+
+2.7.0 is what this app cannot **start** without (it calls `configure_geo`,
+the panel, per-vendor policy and the rate ceiling unconditionally). 2.7.1 is
+additive: `rel="describedby"` discovery relations on both document lanes plus
+`Link` headers, a `text/plain` Accept ramp, and a source digest that makes
+representation parity provable. Nothing here needed changing for it.
+
+Moved by **grepping the number**, not from memory — which turned up a third
+encoding nobody had touched: `ci.yml` still asserted `>=2.3.4`, inherited
+from the template.
+
+### The capability block is gone
+
+That was its design promise, not a convenience. Collapsed to a plain import,
+and every guarded call site with it — including `requires_dimll_27` and the
+`pytestmark` in six modules. That marker could no longer fire once the floor
+guaranteed the feature, and **a skipif that can never trigger is a suite
+quietly overstating its own coverage**.
+
+### The resolution re-proof
+
+Phase 1 mirrored the boilerplate's venv because the sandbox had no network,
+and said so. This is the real thing: fresh venv on **Python 3.12** (CI's
+primary, not phase 1's 3.11), full resolve from PyPI. It pulled genuinely
+newer transitives than the mirror — DMC 2.8.0, plotly 6.9.0, pandas 3.0.5,
+numpy 2.5.2, gunicorn 26.1.0 — and the suite is green on all of it.
+
+*Environment note:* pip ≥24.2 verifies TLS through the macOS keychain, which
+this sandbox denies (`OSStatus -26276`), while plain OpenSSL + certifi
+through the same proxy works. pip falls back to certifi when
+`pip._vendor.truststore` cannot be imported, so the install ran through a
+three-line wrapper that blocks that import. Nothing in the repo changed —
+only how pip verifies.
+
+### The workflow audit, before the push
+
+The excalidraw lesson. `cd.yml` carried
+`SITE_URL: https://boilerplate.2plot.dev` **hard-coded**. Unguarded, the
+inaugural push would have polled another site's `/healthz` for fifteen
+minutes waiting for a commit it will never serve, failed, then run both live
+batteries against it — a fork failing CD on day one over a host it does not
+own. `ci.yml` still tagged its image `dash-docs-boilerplate:ci` and described
+this repo as the template.
+
+Everything touching a running host is now gated on the repository variable
+`SITE_URL`, **with no hard-coded fallback** — an empty value *is* the signal
+that no service exists, and a default would silently re-point the workflow at
+someone else's host. Unguarding takes no workflow edit, twice: B3 sets the
+variable to the `.onrender.com` URL, B5 changes it to the domain.
+
+### The inaugural push, and its three failures
+
+The first run in this repo's history went red in three places, all mine, none
+catchable locally because **neither lint nor the older-Dash matrix leg had
+ever run here**:
+
+- **flake8, 8 findings** — seven unused imports and a blank-line count,
+  almost all orphaned by edits earlier in this same phase.
+- **dash 4.4.0, both backends** — `test_the_nonce_mask_is_sound`, the control
+  for every byte-identical assertion in the geo file, asserted that two
+  identical requests DIFFER. True on 4.4.1 (which stamps a per-request
+  `end_id` nonce), false on 4.4.0. **A control test coupled to a Dash version
+  fact.** Rewritten to assert the two properties that actually matter and
+  hold on either version: the mask is sound (identical requests compare
+  equal) and not over-broad (it must not equalise two *different* pages).
+
+The CD guard worked on that same run: `deploy to render` and `verify the live
+site` both skipped. Nothing was battered against a host this repo does not
+own — which was the entire point of auditing before pushing rather than
+after.
+
+Verified on both Dash versions this time: **597 / 594 passed** on 4.4.0 and
+4.4.1 alike, flake8 clean.

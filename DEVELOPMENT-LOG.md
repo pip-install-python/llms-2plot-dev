@@ -1,7 +1,7 @@
 # DEVELOPMENT-LOG.md — llms-2plot-dev, phase 1
 
-**Written:** 2026-08-22 · **Repo:** `llms-2plot-dev` · **Branch:** `main`,
-origin unset · **17 commits** on top of the fork · 94 files changed.
+**Written:** 2026-08-22 · **Re-soak appended:** 2026-08-23 · **Repo:**
+`llms-2plot-dev` · **Branch:** `main`, origin unset · origin unset.
 
 Companions: **[BUGS-2.7.0.md](BUGS-2.7.0.md)** (the package findings — read
 that first if you are deciding whether to ship 2.7.0) and
@@ -194,3 +194,65 @@ run a clean install on a networked machine.
 Before any of that: **restart the dev server and click the map.** The
 running instance predates the fix, and the two bugs it exposed in a minute
 were invisible to the suite.
+
+---
+
+## 7. Re-soak — 2026-08-23
+
+The hook repo shipped the pre-tag fix batch. Installed
+`dash_improve_my_llms-2.7.0-py3-none-any.whl`
+`sha256:b91411257750aa1b4f2717ff41eff88717f50d6682c49ae009f8ce5c5e286d56`.
+
+**The signal fired.** All eight strict xfails flipped to `XPASS(strict)` and
+failed the run — which is what those markers exist to do. #1 and #2 are
+genuinely fixed; #3 and #4 were doc/code disagreements and GEO.md moved to
+match the code, which was the recommendation.
+
+Markers removed and assertions inverted, with two strengthened past what the
+originals checked:
+
+- **#1** now asserts the *documented contract* rather than merely "not a
+  500": an unhashable element yields an **empty denylist**, so a denied
+  country is served normally. It also pins the deliberate asymmetry the
+  corrected GEO.md spells out — one nested object voids the whole list, while
+  a malformed *string* entry is skipped and the valid entries keep blocking.
+- **#2** now asserts three halves: the effective verdict, the vendor's **own**
+  `User-agent:` group, and the served 403. The middle one matters — the bug
+  was inheritance from `User-agent: *`, so a check that only resolves the
+  effective verdict would start passing again for the wrong reason the day
+  the `*` group flipped to Disallow.
+
+### New finding — #5, and the tag stays held
+
+The batch's H1 dedup landed on `prerender.py` and not on
+`html_generator.py`. This package serves **two documents**: a browser-like
+UA gets the app shell with the prerender injected; a declared crawler gets a
+separate static document. The fix covers the first. Every page of the second
+— the one Googlebot, ClaudeBot and GPTBot actually receive — still ships two
+identical `<h1>`s. 11/11 pages, both backends.
+
+Pre-existing on 2.6.1, so **not a regression**. But it is the same defect the
+fix's own comment describes ("confirmed on every host"), left on the half
+that matters more for search. Per the re-soak charter, that holds the tag;
+whether to ship anyway is the owner's call and #5 carries what is needed to
+make it.
+
+Writing those pins forced a distinction the first draft got wrong: a test
+that fetches with `CRAWLER_UA` and looks for the prerender block finds
+nothing at all. Both lanes are covered now, with a control test so #5 cannot
+silently change shape.
+
+**Also fixed on this side:** `templates/index.html` shipped an `<h1>` in its
+`<noscript>` block — a crawler runs no JS and parses noscript, so every page
+had a second site-wide h1 competing with its own. Demoted to `<h2>`. Same
+defect class as #5, one layer out, and worth a line in the boilerplate
+alongside §3b.
+
+### Totals after the re-soak
+
+| | Flask | FastAPI |
+|---|---|---|
+| Full suite | 585 passed, 1 skipped, 1 xfailed | 582 passed, 4 skipped, 1 xfailed |
+
+The single remaining xfail is #5. It will fail the moment #5 is fixed, which
+is the signal for the next re-soak.

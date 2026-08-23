@@ -525,3 +525,47 @@ as "the floor", which has been >=2.7.1 since Phase B.
 
 **602 passed / 1 skipped (flask), 599 passed / 4 skipped (fastapi)**,
 flake8 clean.
+
+---
+
+## 12. Template sync — geo.resolved on every backend (2026-08-23)
+
+Ported from `dash-documentation-boilerplate` 1.6.12 (`9462aff`), the fix to
+code section 10 added here two commits earlier.
+
+**The defect.** `_resolved_country` read Flask's request context directly. On
+FastAPI and Quart there is no Flask request, so `has_request_context()` is
+False and the field answered `"no request context"` — permanently, on two of
+three backends. The field is the one GEO.md calls the **mandatory** per-host
+check, so a non-Flask host would have had the check silently unavailable in
+exactly the way that motivated adding it. The template caught it on
+pannellum's production healthz (FastAPI); this fork runs Flask, so it was
+latent here — a backend switch away, and switching backends is a one-variable
+change this repo tests on every push.
+
+**The fix.** Each route hands its own framework's headers to
+`health_payload(backend, headers=...)`; `normalize_headers` accepts
+Flask/Starlette/Quart/dict and never raises. The Flask-context fallback stays
+for callers that pass nothing.
+
+**One test, three backends.** The template pinned this with two tests (a
+Flask one and a `TestClient` one). This repo's `client` fixture is already
+whichever backend `DASH_BACKEND` names, and CI runs flask/fastapi/quart legs,
+so a single test spending one spoofed `CF-IPCountry: FR` covers all three
+against a real request of each framework's own type. `/healthz` is an exempt
+path, so the header resolves without being enforced.
+
+Measured on each backend before and after:
+
+| backend | before | after |
+|---|---|---|
+| flask | `FR (via cf-ipcountry)` | `FR (via cf-ipcountry)` |
+| fastapi | `no request context` | `FR (via cf-ipcountry)` |
+| quart | (as fastapi) | `FR (via cf-ipcountry)` |
+
+The quart lane had never run locally — quart is not in this repo's install
+set, it arrives via `dash[quart]` in CI only. Installed into a scratch path
+for this pass, the **full suite** passes on it: 600 passed / 4 skipped.
+
+**603 passed / 1 skipped (flask), 600 / 4 (fastapi), 600 / 4 (quart)**,
+flake8 clean.

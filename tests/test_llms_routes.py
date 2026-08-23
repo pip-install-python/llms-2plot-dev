@@ -350,3 +350,29 @@ def test_healthz_never_publishes_the_country_codes(app_module, client):
             unknown=policy_store.geo_unknown(),
             exempt_paths=("/healthz", "/health", "/livez", "/readyz"),
         )
+
+
+def test_healthz_resolves_the_country_from_this_requests_headers(client):
+    """`resolved` must read THIS request's headers — on EVERY backend.
+
+    The first version of the geo block called Flask's request context
+    directly, so the FastAPI and Quart lanes answered "no request context"
+    forever: a diagnostic that silently stops diagnosing on two of three
+    backends, and specifically on the one field GEO.md calls the mandatory
+    per-host check. The template caught it on pannellum's production
+    healthz (FastAPI) and fixed it in 1.6.12 by having each route hand its
+    own framework's headers to `health_payload`; this fork ported it before
+    its own non-Flask lane shipped.
+
+    One test, not two: `client` is whichever backend DASH_BACKEND names, so
+    CI's flask/fastapi/quart legs each run this against a real request of
+    their own framework's type. `/healthz` is an exempt path, so the
+    spoofed header resolves without being enforced.
+    """
+    import json
+
+    geo = json.loads(client.get("/healthz", headers={"CF-IPCountry": "FR"}).text)["geo"]
+    assert "FR" in geo["resolved"], (
+        f"/healthz did not resolve this request's country ({geo}) — the "
+        "route is not passing its own headers through"
+    )

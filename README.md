@@ -214,10 +214,13 @@ reconstructed component id.
 
 `dash-improve-my-llms` **2.7.0** is not on PyPI yet. `requirements.txt` still
 floors at `>=2.6.1`, and every 2.7.0 call site is behind a capability probe
-(`LLMS_HAS_27` in `run.py`) so the app boots on either. See
-[PHASE1-REPORT.md](PHASE1-REPORT.md) for what is built and what is deferred,
-and [BUGS-2.7.0.md](BUGS-2.7.0.md) for the pre-release soak that gates the
-release.
+(`LLMS_HAS_27` in `run.py`) so the app boots on either.
+
+| Document | What it carries |
+|---|---|
+| [BUGS-2.7.0.md](BUGS-2.7.0.md) | the pre-release soak's findings — **gates the v2.7.0 tag** |
+| [PHASE1-REPORT.md](PHASE1-REPORT.md) | what is built, deferred, and blocked |
+| [DEVELOPMENT-LOG.md](DEVELOPMENT-LOG.md) | how it went, every issue found, and who owns each fix |
 
 ---
 

@@ -256,3 +256,52 @@ alongside §3b.
 
 The single remaining xfail is #5. It will fail the moment #5 is fixed, which
 is the signal for the next re-soak.
+
+---
+
+## 8. Final re-soak — 2026-08-23 — TAG READY
+
+`sha256:05180075dd43ddb083af555e3cc7bf5345fe84c6554e5b8f17fb9bc807ade1a0`,
+verified against the file **before** installing.
+
+**#5 fixed at 93a02d6.** `html_generator.py` now carries the identical
+leading-h1 guard `prerender.py` has, and its xfail flipped as designed.
+Marker removed, behaviour asserted positively.
+
+All three prose shapes are pinned at the generator, not just the one this
+site happens to produce: prose that opens with its own h1 (the header
+contributes only the description), prose starting mid-thought, and a page
+with no prose at all (the header's h1 is the only one and stays). A dedup
+that simply *deleted* the header h1 would have passed the end-to-end test and
+left doc-less pages with no heading.
+
+The test worth keeping is `test_exactly_one_h1_on_both_lanes_for_every_page`
+— browser and crawler counts compared per page, in one place. **That is the
+test that would have caught #5 originally**: the package serves two
+documents, the first fix covered one, and no single assertion compared them.
+A companion test requires both modules to carry the guard, so the lanes
+cannot drift apart again.
+
+Measured: **1 h1 on both lanes, all 11 pages, both backends, zero drift.**
+
+### Two link fixes the audit surfaced
+
+- `pages/home.md` still linked `/networks`, a page this fork deleted — it
+  resolved through a 301 rather than pointing at its destination. Repointed
+  at the policy panel, where the live network directory actually renders.
+- `scripts/audit_links.py` now skips pages the package deliberately hides.
+  `mark_hidden()` makes a page's `llms.txt` 404 *by design*, and
+  `network_smoke.py` asserts it does — an audit that reports designed
+  behaviour as a broken link is an audit people learn to ignore.
+
+### Final totals
+
+| | Flask | FastAPI |
+|---|---|---|
+| Full suite | **597 passed, 1 skipped, 0 xfailed** | **594 passed, 4 skipped, 0 xfailed** |
+
+`audit_links`: 0 broken internal, 0 broken anchors. **No strict xfails remain
+anywhere in the suite.**
+
+The soak is closed. Five findings, all fixed and verified from the
+application side, on the seam a package suite structurally cannot reach.

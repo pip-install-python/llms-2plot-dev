@@ -154,10 +154,25 @@ def main() -> int:
     base_host = urlparse(BASE_URL).netloc
     network_hosts = {urlparse(p["url"]).netloc for p in nd.PEERS}
 
+    # Pages marked hidden are SUPPOSED to 404 their llms.txt — that is what
+    # mark_hidden() does, and scripts/network_smoke.py asserts it. Auditing
+    # them reports the designed behaviour as a broken link, which is how an
+    # audit teaches people to ignore its output.
+    try:
+        from dash_improve_my_llms import is_hidden
+    except ImportError:  # pre-2.x package: nothing is hideable
+        def is_hidden(_path):  # type: ignore[misc]
+            return False
+
     docs: List[Tuple[str, str]] = [("/", "/llms.txt")]
+    hidden: List[str] = []
     for entry in sorted(dash.page_registry.values(), key=lambda e: e["path"]):
-        if entry["path"] != "/":
-            docs.append((entry["path"], f"{entry['path'].rstrip('/')}/llms.txt"))
+        if entry["path"] == "/":
+            continue
+        if is_hidden(entry["path"]):
+            hidden.append(entry["path"])
+            continue
+        docs.append((entry["path"], f"{entry['path'].rstrip('/')}/llms.txt"))
 
     findings: Dict[str, List[Tuple[str, str, str]]] = {
         "internal": [], "anchor": [], "self-host": [], "network": [], "external": [],
@@ -230,7 +245,11 @@ def main() -> int:
                         (page, target, f"HTTP {status}" if status else "unreachable")
                     )
 
-    print(f"Audited {len(docs)} documents, {total} links\n")
+    print(f"Audited {len(docs)} documents, {total} links")
+    if hidden:
+        print(f"Skipped {len(hidden)} hidden page(s) — their llms.txt 404s by "
+              f"design: {', '.join(hidden)}")
+    print()
 
     print(f"BROKEN — internal ({len(findings['internal'])})")
     for page, target, why in findings["internal"]:

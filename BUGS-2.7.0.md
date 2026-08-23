@@ -1,14 +1,58 @@
 # BUGS-2.7.0.md — the pre-release soak report
 
-**Soaked:** 2026-08-22 · **Re-soaked:** 2026-08-23 against the pre-tag fix
-batch · **Package:** `dash_improve_my_llms-2.7.0-py3-none-any.whl`
-`sha256:b91411257750aa1b4f2717ff41eff88717f50d6682c49ae009f8ce5c5e286d56`
-(local pre-release artifact, tag `v2.7.0` unpushed) · **Host:**
+**Soaked:** 2026-08-22 · **Re-soaked:** 2026-08-23 (fix batch, then #5) ·
+**Package:** `dash_improve_my_llms-2.7.0-py3-none-any.whl`
+`sha256:05180075dd43ddb083af555e3cc7bf5345fe84c6554e5b8f17fb9bc807ade1a0`
+— verified against the file BEFORE installing; only the recorded sha admits · **Host:**
 `llms-2plot-dev` (fork of `dash-documentation-boilerplate` 1.6.7, the future
 llms.2plot.dev) · **Backends:** Flask and FastAPI, every finding reproduced on
 both.
 
 **This file gates the `v2.7.0` tag push.**
+
+## FINAL VERDICT, 2026-08-23 — **TAG READY**
+
+`sha256:05180075dd43ddb083af555e3cc7bf5345fe84c6554e5b8f17fb9bc807ade1a0`
+
+**All five findings are fixed and verified from the application side.** Every
+strict xfail this soak ever raised has flipped and been converted to a
+positive assertion; **none remain**.
+
+| # | Sev | Finding | Status |
+|---|---|---|---|
+| 1 | HIGH | unhashable denylist entry 500s every request | **FIXED** — empty denylist, nobody blocked, nothing 500s |
+| 2 | HIGH | traditional per-vendor block enforced, not published | **FIXED** — `User-agent: Googlebot / Disallow: /` emitted, and the 403 still served |
+| 3 | docs | GEO.md contradicted the malformed-entry behaviour | **FIXED in docs** — code was right, doc moved |
+| 4 | docs | GEO.md contradicted the resolver failure shapes | **FIXED in docs** — both shapes now stated distinctly |
+| 5 | MED | H1 dedup missed the crawler document | **FIXED at 93a02d6** — the guard is mirrored on both lanes |
+
+**Finding #5, closed.** `html_generator.py` now carries the identical
+leading-h1 guard `prerender.py` has. Measured across all 11 pages on **both
+backends**: exactly **one `<h1>` on the browser lane AND one on the crawler
+lane**, zero drift. All three prose shapes pinned at the generator — prose
+that opens with its own h1 (header contributes only the description), prose
+that starts mid-thought, and a page with no prose at all (the header's h1 is
+the only one and stays). A dedup that simply deleted the header h1 would have
+passed the end-to-end test and left doc-less pages with no heading; that is
+why the generator-level shapes are pinned separately.
+
+### Final totals
+
+| | Flask | FastAPI |
+|---|---|---|
+| Full suite | **597 passed, 1 skipped, 0 xfailed** | **594 passed, 4 skipped, 0 xfailed** |
+
+`audit_links`: **0 broken internal links**, 0 broken anchors. The 4 external
+flags are inherited network peers unreachable from this sandbox
+(`ai-agent.buzz`, `piratesbargain.com`); `lib/network_directory.py` is
+untouched since the fork.
+
+The crawler-document bytes changed and **nothing else moved** — the full
+inherited suite is green on both backends.
+
+---
+
+<details><summary>The 2026-08-23 interim verdict (TAG HELD on #5), kept for the record</summary>
 
 ## Re-soak verdict, 2026-08-23 — TAG HELD
 
@@ -35,6 +79,8 @@ make it.
 
 Re-soak totals: **585 passed / 1 skipped / 1 xfailed** (Flask) ·
 **582 / 4 / 1** (FastAPI). The single xfail is #5.
+
+</details>
 
 ## What the soak was
 
@@ -337,7 +383,7 @@ Both behaviours are defensible; neither is what the doc says. Pinned by
 
 ---
 
-## #5 — MEDIUM — the H1 dedup missed the crawler document, so every page ships two identical `<h1>`s to Googlebot
+## #5 — ~~MEDIUM~~ **FIXED 2026-08-23 at 93a02d6** — the H1 dedup missed the crawler document, so every page ships two identical `<h1>`s to Googlebot
 
 **Found on the re-soak, 2026-08-23.** Not a regression — 2.6.1 carries it
 identically — but it is the same defect the batch's own fix targets, on the
@@ -420,10 +466,18 @@ header_h1 = "" if body_opens_with_h1 else f"<h1>{title}</h1>"
 
 ### Pinned by
 
-`tests/test_prerender_seo.py::test_the_crawler_document_has_exactly_one_h1`
-(`xfail(strict=True)`), with
-`test_the_crawler_document_is_still_the_one_crawlers_get` as the control so
-the finding cannot silently change shape.
+`tests/test_prerender_seo.py` — the marker is gone and the behaviour is
+asserted positively:
+
+- `test_the_crawler_document_has_exactly_one_h1` — end to end, every page;
+- `test_exactly_one_h1_on_both_lanes_for_every_page` — **the control that
+  would have caught this originally**: browser and crawler counts compared
+  per page, in one place, so a future fix cannot cover half the surface
+  without failing here;
+- three generator-level shape tests (prose with its own h1, prose with none,
+  no prose at all);
+- `test_both_lanes_carry_the_identical_guard` — both modules must carry the
+  guard, so the lanes cannot drift apart again.
 
 ### Related, and fixed on this side
 
@@ -523,16 +577,13 @@ someone "fixes" it.
 
 ## Recommendation
 
-**Superseded by the 2026-08-23 re-soak verdict at the top of this file.**
-Items 1–4 below are done. What remains:
+**Superseded by the FINAL VERDICT at the top of this file: TAG READY.**
 
-- **Fix #5**, or ship with it recorded as a known limitation. It is not a
-  regression, so shipping does not make anything worse — but the batch's
-  stated purpose was this exact defect, and it is unfixed on the path search
-  engines use.
-- The eight strict xfails for #1 and #2 are gone, replaced by positive
-  assertions. One strict xfail remains, on #5: it will fail the moment #5 is
-  fixed, which is the signal for the next re-soak.
+All five findings are fixed and verified. No strict xfails remain. Push
+`v2.7.0` at
+`sha256:05180075dd43ddb083af555e3cc7bf5345fe84c6554e5b8f17fb9bc807ade1a0`,
+publish, and this repo's floor moves to `>=2.7.0` (see PHASE1-REPORT.md for
+the collapse-the-capability-block step that rides it).
 
 <details><summary>The original 2026-08-22 recommendation, kept for the record</summary>
 

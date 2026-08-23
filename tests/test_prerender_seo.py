@@ -123,17 +123,17 @@ def test_the_whole_browser_document_has_exactly_one_h1(client, page_paths):
 # 2. The crawler lane — BUGS-2.7.0.md #5
 # ---------------------------------------------------------------------------
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BUGS-2.7.0.md #5 — the H1 dedup landed on prerender.py:204 but NOT on "
-    "html_generator.py:328, which emits <header><h1>{title}</h1> "
-    "unconditionally before a <main> whose body_html opens with the prose's "
-    "own <h1>. Every page of the CRAWLER document — the one Googlebot, "
-    "ClaudeBot and GPTBot actually receive — carries two identical h1s. "
-    "Pre-existing on 2.6.1, so not a regression, but it is the same defect "
-    "the batch set out to fix, left on the path that matters most for SEO. "
-    "Remove this marker when the package fixes it."
-))
 def test_the_crawler_document_has_exactly_one_h1(client, page_paths):
+    """WAS BUGS-2.7.0.md #5, fixed at 93a02d6.
+
+    The H1 dedup originally landed on `prerender.py` only, so every page of
+    the CRAWLER document — the one Googlebot, ClaudeBot and GPTBot actually
+    receive — still carried two identical h1s. The guard now lives on both
+    lanes, and `html_generator.py` carries it verbatim.
+
+    This is the end-to-end pin: the real page tree, the real generator, a
+    declared crawler UA.
+    """
     offenders = []
     for path in page_paths:
         found = _h1s(client.get(path, user_agent=CRAWLER_UA).text)
@@ -142,6 +142,104 @@ def test_the_crawler_document_has_exactly_one_h1(client, page_paths):
     assert offenders == [], (
         f"crawler documents with != 1 h1 ({len(offenders)}/{len(page_paths)} "
         f"pages): {offenders[:3]}"
+    )
+
+
+def test_the_crawler_h1_names_the_page(client, pages):
+    """One h1 is necessary, not sufficient — same rule as the prerender lane."""
+    import html as _h
+
+    from lib.constants import SITE_BRAND
+
+    mismatches = []
+    for path, name, _entry in pages:
+        found = _h1s(client.get(path, user_agent=CRAWLER_UA).text)
+        if not found:
+            continue
+        expected = SITE_BRAND if path == "/" else name
+        if found[0] != _h.unescape(expected):
+            mismatches.append(f"{path}: h1={found[0]!r} expected {expected!r}")
+    assert mismatches == [], f"crawler h1 does not name its page: {mismatches}"
+
+
+# --- the guard itself, both prose shapes, at the generator ----------------
+# The end-to-end test above only exercises shape 1: every page on this site
+# registers prose that opens with `# Name`. Shape 2 — prose with no leading
+# h1, where the HEADER must supply the only one — has no page to ride on
+# here, so it is driven at the generator directly. A dedup that simply
+# deleted the header h1 would pass every test above and leave a doc-less
+# page with no h1 at all.
+
+def _generated(prose, *, title="Soak", path="/soak"):
+    from dash_improve_my_llms.html_generator import generate_static_page_html
+
+    meta = {"name": title, "title": title, "description": "a description"}
+    if prose is not None:
+        meta["llms_doc"] = prose
+    return generate_static_page_html(
+        path, meta,
+        [{"path": "/soak", "name": title}, {"path": "/other", "name": "Other"}],
+        {"name": "Soak App", "base_url": "https://llms.2plot.dev"},
+    )
+
+
+def test_the_crawler_lane_dedups_when_the_prose_opens_with_an_h1():
+    """Shape 1: the prose brings its own h1, so the header contributes only
+    the description."""
+    out = _generated("# Alpha\n\nSome prose.\n", title="Alpha")
+    assert _h1s(out) == ["Alpha"], _h1s(out)
+    assert "a description" in out, "the dedup took the description with it"
+
+
+def test_the_crawler_lane_keeps_the_header_h1_when_the_prose_has_none():
+    """Shape 2: prose starting mid-thought — the header's h1 is the page's
+    only one and must stay."""
+    out = _generated("Prose that starts mid-thought.\n\n## Sub\n", title="Beta")
+    assert _h1s(out) == ["Beta"], _h1s(out)
+
+
+def test_the_crawler_lane_keeps_the_header_h1_with_no_prose_at_all():
+    """Shape 3: a page that registers no LLMS_DOC still needs a heading."""
+    out = _generated(None, title="Gamma")
+    assert _h1s(out) == ["Gamma"], _h1s(out)
+
+
+def test_both_lanes_carry_the_identical_guard():
+    """The two implementations must agree, not merely both happen to pass.
+
+    Same input shape, same verdict, on both generators — which is the
+    property that stops the two lanes drifting apart again.
+    """
+    from dash_improve_my_llms import html_generator, prerender
+
+    for module, needle in ((prerender, 'startswith("<h1")'),
+                           (html_generator, 'startswith("<h1")')):
+        source = __import__("inspect").getsource(module)
+        assert needle in source, (
+            f"{module.__name__} carries no leading-h1 guard — the lanes can "
+            "drift apart again"
+        )
+
+
+def test_exactly_one_h1_on_both_lanes_for_every_page(client, page_paths):
+    """THE control for finding #5, stated as one assertion.
+
+    The package serves two documents. Before 93a02d6 the browser lane had
+    one h1 and the crawler lane had two, and no single test compared them —
+    which is exactly how the fix came to land on one lane only. This checks
+    both, per page, in one place, so a future fix cannot cover half the
+    surface without failing here.
+    """
+    table = []
+    for path in page_paths:
+        browser = len(_h1s(client.get(path, user_agent=BROWSER_UA).text))
+        crawler = len(_h1s(client.get(path, user_agent=CRAWLER_UA).text))
+        if (browser, crawler) != (1, 1):
+            table.append(f"{path}: browser={browser} crawler={crawler}")
+
+    assert table == [], (
+        "a document lane carries the wrong number of h1s — the two lanes "
+        f"have drifted apart again: {table}"
     )
 
 

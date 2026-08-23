@@ -117,7 +117,7 @@ all three.
 - **GitHub**: [pip-install-python/dash-improve-my-llms](https://github.com/pip-install-python/dash-improve-my-llms)
 - **The network**: [2plot.dev](https://2plot.dev) indexes every component
   site that runs this package — including this one.
-- **Multi-site networks**: [wiring a family of documentation sites together](/networks)
+- **The live directory**: every peer site, and this host's own policy, on the [policy panel](/showcase/policy-panel)
 
 ### Community
 

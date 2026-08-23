@@ -18,6 +18,29 @@ import os
 import dash
 
 
+def _resolved_country() -> str:
+    """`geo.explain_resolution` over THIS request's headers, or a reason.
+
+    Reads the framework's request object directly rather than anything the
+    package threads through, so it answers "did the header reach this app at
+    all?" independently of how the enforcement seam is wired.
+    """
+    try:
+        from dash_improve_my_llms import geo
+        from dash_improve_my_llms._headers import normalize_headers
+    except Exception:
+        return "unavailable (pre-2.7.0 package)"
+
+    try:
+        from flask import has_request_context, request
+
+        if not has_request_context():
+            return "no request context"
+        return geo.explain_resolution(normalize_headers(request.headers))
+    except Exception:
+        return "unavailable"
+
+
 def health_payload(backend: str) -> dict:
     payload = {"ok": True, "backend": backend, "dash_version": dash.__version__}
     # Which commit the RUNNING instance was built from. This is what lets CD
@@ -56,6 +79,19 @@ def health_payload(backend: str) -> dict:
         payload["geo"] = {
             "configured": bool(geo.is_configured()),
             "denied": len(geo.effective_policy().get("deny_countries") or []),
+            # THE per-host check docs/GEO.md mandates before trusting a
+            # denylist: "this request resolved to DE (via cf-ipcountry)".
+            # GEO.md points at the operator panel for it, which is
+            # token-gated — so on a host where nobody has the token, the one
+            # check the docs call mandatory is unavailable. It costs nothing
+            # here and reveals only the caller's own country back to them,
+            # which Cloudflare's /cdn-cgi/trace already does.
+            #
+            # It also localises a failure: geo can be configured with a full
+            # denylist and still never match, if the country header is not
+            # reaching the app. "configured: true, denied: 7, resolved:
+            # unknown" says that in one line.
+            "resolved": _resolved_country(),
         }
     except Exception:  # never let a diagnostic break the health probe
         payload["geo"] = {"configured": False, "denied": 0, "error": True}

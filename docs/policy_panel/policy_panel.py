@@ -123,14 +123,13 @@ def _summary_cards(denied):
     import dash
     from dash_improve_my_llms import __version__ as pkg_version
 
-    try:
-        # `vendors` is 2.7.0; this repo still floors on 2.6.1 (run.py's
-        # LLMS_HAS_27 block), so the fold is optional and its absence shows
-        # as zero rather than an error toast.
-        from dash_improve_my_llms.vendors import effective_policies
+    from dash_improve_my_llms.vendors import effective_policies
 
+    try:
         policies = effective_policies(getattr(dash.get_app(), "_robots_config", None))
     except Exception:
+        # The fold reads a live config object; a public showcase degrades to
+        # zeroes rather than throwing an error toast at a reader.
         policies = {}
     blocked = sum(1 for value in policies.values() if value == "block")
     metered = sum(1 for value in policies.values() if value == "meter")

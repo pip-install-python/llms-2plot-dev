@@ -79,7 +79,7 @@ from dash_improve_my_llms import (
 # `configure_seo` is deliberately imported AFTER this floor fires (see the
 # floors block) so a stale environment gets the floor's diagnosis instead of
 # a bare ImportError.
-LLMS_PKG_FLOOR = (2, 6, 1)
+LLMS_PKG_FLOOR = (2, 7, 1)
 
 # THE FORK POINT — claim this app's network identity before any
 # hub-facing module imports. Every module that names this app
@@ -174,6 +174,10 @@ if LLMS_PKG_FLOOR > _version(LLMS_PKG_VERSION):
     _dependency_floor(
         f"dash-improve-my-llms {LLMS_PKG_VERSION} is below the "
         f"{'.'.join(str(n) for n in LLMS_PKG_FLOOR)} floor in requirements.txt. "
+        "Below 2.7.0 this app does not start at all: it calls configure_geo, "
+        "LLMSConfig(panel=), RobotsConfig(vendor_policy=) and the rate "
+        "ceiling unconditionally, and the control board writes through the "
+        "callable seams all four expose. "
         "Below 2.6.1 the universal prerender ships `hidden`, so every "
         "visibility-respecting consumer (text extractors, arguably crawler "
         "content-weighting) reads 'Loading...' instead of the page's prose. "
@@ -203,56 +207,18 @@ except ImportError:  # pragma: no cover — ALLOW_STALE_DEPS with a pre-2.5.0 pa
             "package) — crawler identity tags and root icons not emitted."
         )
 
-# ----------------------------------------------------------------------------
-# The 2.7.0 surface: the geo guardrail, the operator panel, per-vendor policy
-# and the rate ceiling. Same post-floor pattern as configure_seo above, and
-# for a sharper reason: requirements.txt still floors at 2.6.1 ON PURPOSE
-# (2.7.0 is not on PyPI yet), so this app has to keep booting on the pinned
-# floor while the code is written against the newer one. Every 2.7.0 call
-# below is guarded by LLMS_HAS_27 rather than by a version comparison —
-# capability, not number, so a partial backport or a yanked release cannot
-# make the guard lie.
+# The 2.7.0 surface: the geo guardrail and the operator panel. Imported after
+# the floor check for the same reason configure_seo is — on a package below
+# the floor these names do not exist, and the floor's diagnosis above beats a
+# bare ImportError.
 #
-# WHEN 2.7.0 PUBLISHES: move the requirements.txt floor to >=2.7.0, raise
-# LLMS_PKG_FLOOR, and this whole block collapses to a plain import. Until
-# then the degrade is load-bearing and tests/test_runtime_imports.py keeps
-# it honest.
-try:
-    from dash_improve_my_llms import configure_geo, geo as _geo  # noqa: E402
-
-    LLMS_HAS_27 = True
-except ImportError:  # pragma: no cover — the pinned 2.6.1 floor
-    LLMS_HAS_27 = False
-    _geo = None
-
-    def configure_geo(**_kwargs) -> None:
-        print(
-            "[llms] WARNING: configure_geo unavailable (pre-2.7.0 package) — "
-            "the country guardrail is not wired. The control board's geo "
-            "section will say so rather than pretending to block."
-        )
-
-
-def _llms_config_27(**kwargs):
-    """`LLMSConfig` with the 2.7.0-only keywords, when they exist.
-
-    `panel=` and `rate_limit_per_minute=` are positional-or-keyword arguments
-    on 2.7.0 and simply absent on 2.6.1, where passing them is a TypeError at
-    boot rather than a degraded feature. Filtering against the real signature
-    keeps one call site for both.
-    """
-    import inspect
-
-    accepted = inspect.signature(LLMSConfig.__init__).parameters
-    unsupported = [k for k in kwargs if k not in accepted]
-    for key in unsupported:
-        kwargs.pop(key)
-    if unsupported:
-        print(
-            "[llms] WARNING: this dash-improve-my-llms build does not accept "
-            f"{', '.join(sorted(unsupported))} — feature(s) not wired."
-        )
-    return LLMSConfig(**kwargs)
+# This was a LLMS_HAS_27 capability block until 2026-08-23, carrying a degrade
+# path for every call site because requirements.txt still floored at >=2.6.1
+# while 2.7.0 was unpublished. 2.7.0 is on PyPI and the floor moved, so the
+# block collapsed to this import — which was its stated design promise, not a
+# convenience. A guard kept past the condition it guards is a guard nobody
+# can reason about.
+from dash_improve_my_llms import configure_geo, geo as _geo  # noqa: E402
 
 
 def _rate_ceiling():
@@ -421,7 +387,7 @@ app._robots_config = RobotsConfig(
     allow_traditional=True,       # Allow Googlebot, Bingbot, etc.
     crawl_delay=10,
     disallowed_paths=[],
-    **({"vendor_policy": _policy_store.vendor_policy} if LLMS_HAS_27 else {}),
+    vendor_policy=_policy_store.vendor_policy,
 )
 
 # ============================================================================
@@ -755,13 +721,12 @@ configure_geo(
     policy_url=os.environ.get("GEO_POLICY_URL", ""),
 )
 
-if LLMS_HAS_27:
-    _geo_policy = _geo.effective_policy()
-    print(
-        f"[llms] geo guardrail: {len(_geo_policy['deny_countries'])} "
-        f"country(ies) denied via {_geo_policy['denylist_source']}, unknown="
-        f"{_geo_policy['unknown']} — store {_policy_store.path()}"
-    )
+_geo_policy = _geo.effective_policy()
+print(
+    f"[llms] geo guardrail: {len(_geo_policy['deny_countries'])} country(ies) "
+    f"denied via {_geo_policy['denylist_source']}, unknown="
+    f"{_geo_policy['unknown']} — store {_policy_store.path()}"
+)
 
 # Wire up the package: /llms.txt, /<page>/llms.txt, /robots.txt, /sitemap.xml,
 # bot-detection middleware, and (on Dash 4.3+) MCP resource registration.
@@ -771,7 +736,7 @@ if LLMS_HAS_27:
 # DIMLL_PANEL_TOKEN — so an operator can rotate or revoke it live. Register
 # it only when the token happens to be set at boot and that promise breaks:
 # turning the panel on would cost a redeploy, which is when nobody does it.
-add_llms_routes(app, _llms_config_27(
+add_llms_routes(app, LLMSConfig(
     warn_missing_llms_doc=True,
     panel=True,
     rate_limit_per_minute=_rate_ceiling(),

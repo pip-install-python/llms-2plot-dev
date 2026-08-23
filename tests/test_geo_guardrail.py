@@ -22,11 +22,6 @@ import re
 
 import pytest
 
-from conftest import requires_dimll_27
-
-# Every assertion in this module is about the 2.7.0 surface. On the
-# pinned 2.6.1 floor the whole file skips rather than fails.
-pytestmark = requires_dimll_27
 
 from conftest import BROWSER_ACCEPT, BROWSER_UA, CRAWLER_UA
 

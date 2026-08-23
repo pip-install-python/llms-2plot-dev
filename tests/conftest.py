@@ -87,30 +87,6 @@ BROWSER_ACCEPT = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.
 STUB_MARKER = "This page contains interactive content that requires JavaScript"
 
 
-def dimll_has_27() -> bool:
-    """Whether the installed package carries the 2.7.0 surface.
-
-    A CAPABILITY probe, matching run.py's LLMS_HAS_27: requirements.txt
-    still floors at >=2.6.1 on purpose, so a clean `pip install -r
-    requirements.txt` resolves 2.6.1 and every 2.7.0-only test in this suite
-    has to SKIP rather than fail. A red suite on the pinned floor would train
-    everyone to ignore it.
-    """
-    try:
-        import dash_improve_my_llms.vendors  # noqa: F401
-
-        return True
-    except ImportError:
-        return False
-
-
-requires_dimll_27 = pytest.mark.skipif(
-    not dimll_has_27(),
-    reason="needs dash-improve-my-llms >= 2.7.0 (requirements.txt still "
-           "floors at >=2.6.1 until the tag ships)",
-)
-
-
 def backend() -> str:
     """Whichever backend the app will actually boot on.
 

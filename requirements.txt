@@ -117,15 +117,32 @@ python-dotenv>=1.0.0
 # (the invented daily dates are gone — Google discards a sitemap of lies
 # wholesale), JSON-LD publisher.logo, and the llms.txt viewer banner
 # de-dup. Floor, not pin: the fleet upgrades through this line.
-# 2.6.1 floor: the universal prerender ships VISIBLE to non-JS consumers
-# (below it the block carries a literal `hidden` attribute and every
-# visibility-respecting reader sees only "Loading..." — the outside-audit
-# finding of 2026-08-22). run.py's boot floor and a test in
-# tests/test_pages.py encode the same number — grep it, don't move one.
-dash-improve-my-llms[flask]>=2.6.1
-# dash-improve-my-llms[fastapi]>=2.6.1   # Dash 4.4+ FastAPI backend
-# dash-improve-my-llms[quart]>=2.6.1     # Dash 4.4+ Quart backend
-# dash-improve-my-llms[all]>=2.6.1       # all three
+# 2.7.1 floor (2026-08-23). TWO releases matter here and the floor names the
+# later one deliberately — the fleet's floor round happens once.
+#
+# 2.7.0, the agent toll gate, is what this app CANNOT START without: it calls
+# `configure_geo`, `LLMSConfig(panel=)`, `RobotsConfig(vendor_policy=)` and
+# the rate ceiling unconditionally, so anything lower is an ImportError at
+# boot rather than a degraded feature. It also carries the two defects this
+# repo's own soak found and gated the tag on (BUGS-2.7.0.md #1 and #2): a
+# `deny_countries` callable returning a nested object used to 500 EVERY
+# request on EVERY surface, and a per-vendor block on a traditional crawler
+# was enforced but never published in robots.txt. Both are reachable from the
+# control board this site ships, which is why they were blocking.
+#
+# 2.7.1 is the standards fast-follow, published 36 minutes after 2.7.0 and
+# additive throughout: `rel="describedby"` discovery relations on both
+# document lanes plus HTTP `Link` headers, a `text/plain` Accept ramp for
+# retrieval stacks that reject `text/markdown`, and a `llms-source-digest`
+# that makes representation parity across the three lanes provable rather
+# than plausible.
+#
+# 2.6.1 remains the previous rung and its reason is still live: below it the
+# universal prerender ships VISIBLE to non-JS consumers.
+dash-improve-my-llms[flask]>=2.7.1
+# dash-improve-my-llms[fastapi]>=2.7.1   # Dash 4.4+ FastAPI backend
+# dash-improve-my-llms[quart]>=2.7.1     # Dash 4.4+ Quart backend
+# dash-improve-my-llms[all]>=2.7.1       # all three
 
 # Clerk authentication (dash-clerk-auth, vendored — not on PyPI).
 #

@@ -274,7 +274,7 @@ def test_a_version_claim_for_an_absent_package_fails_the_boot():
 
 
 def test_code_examples_keep_the_placeholder_syntax_verbatim():
-    """docs/network-standard SHOWS the syntax in a fence; substituting there
+    """A doc that SHOWS the syntax in a fence must keep it; substituting there
     would render the example as a number and undocument the mechanism."""
     from lib.versions import substitute_versions
 

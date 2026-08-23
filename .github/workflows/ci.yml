@@ -19,7 +19,7 @@
 #   * an advisory pip-audit.
 #
 # A fork changes the matrix and the image name. Everything else is the
-# standard; see docs/network-standard.
+# standard; see the 2plot network standard on boilerplate.2plot.dev.
 
 name: CI
 

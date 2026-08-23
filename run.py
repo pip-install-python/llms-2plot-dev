@@ -484,7 +484,7 @@ configure_seo(
 # Internal pages — excluded from /sitemap.xml, blocked in /robots.txt,
 # skipped by the MCP bridge, and return 404 to crawler requests on the
 # page URL and on /<page>/llms.txt. This boilerplate ships no internal pages,
-# so there is nothing to hide; see docs/ai-integration for usage:
+# so there is nothing to hide; see /reference/configuration for usage:
 #
 #     from dash_improve_my_llms import mark_hidden
 #     mark_hidden("/admin")

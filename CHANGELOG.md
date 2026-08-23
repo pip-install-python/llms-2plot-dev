@@ -5,6 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [llms-2plot-dev 1.0.0] - 2026-08-22
+
+**This repository forked here.** Everything below this entry is the history of
+`dash-documentation-boilerplate`, the template this site was forked from at
+1.6.7 — kept because the machinery is inherited and its reasoning still
+applies. Everything from here up is `llms-2plot-dev`, the documentation site
+for `dash-improve-my-llms` and the 2plot network's owner-control bench.
+
+### Added
+
+- **The site's own content.** Three audience pages (`/audiences/mcp-clients`,
+  `/audiences/web-crawlers`, `/audiences/llm-context` — URLs preserved byte
+  for byte from the retiring service), a five-page Reference section, and
+  three showcases that run the package's own pure handlers in-process.
+- **`lib/policy_store.py`** — the writable layer. Flock-guarded JSON,
+  validated on write, atomic on replace, fail-open on read, re-stat'd on
+  every call. Reaches `dash-improve-my-llms` 2.7.0 through its callable
+  seams, so a control-board toggle lands on the next request in every worker
+  with no restart.
+- **The control board's country guardrail** — a click-to-select world map
+  over the inherited page-visibility board, with the admin gate re-checked
+  server-side in the write callback.
+- **`BUGS-2.7.0.md`** — the pre-release soak that gates the package's tag.
+
+### Changed
+
+- **Identity, on every surface**: brand, description, origin, favicons from
+  the hook mark, header logo and wordmark, the GitHub link, the social-card
+  object, and the JSON-LD blocks.
+- **The template's documentation is DELETED, not hidden** (owner decision).
+  `excluded_links` hid the eleven tutorial pages from the sidebar but left
+  them in `sitemap.xml`, `/llms.txt`, `/llms-full.txt` and the MCP resource
+  set — so this host would have published the boilerplate's documentation as
+  its own. This overrides the migration kickoff's "NEVER deleted (wave-sync
+  purity)" rule: template syncs touching `docs/` now need resolving by hand,
+  and that cost was accepted for a site that stands on its own.
+- Sixteen `301` redirects for retired and deleted URLs.
+
+### Notes
+
+- `requirements.txt` still floors at `dash-improve-my-llms>=2.6.1`. 2.7.0 is
+  unpublished, so every 2.7.0 call site sits behind the `LLMS_HAS_27`
+  capability probe in `run.py` and the app boots on either release.
+
+---
+
 ## [1.6.7] - 2026-08-22
 
 ### Added

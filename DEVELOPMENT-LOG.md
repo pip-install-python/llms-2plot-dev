@@ -394,3 +394,92 @@ after.
 
 Verified on both Dash versions this time: **597 / 594 passed** on 4.4.0 and
 4.4.1 alike, flake8 clean.
+
+---
+
+## 10. Production verification (2026-08-23)
+
+llms.2plot.dev's service was repointed to this repo; the deploy replaced the
+old flagship in place, so hub-row continuity is automatic.
+
+### Confirmed
+
+| Check | Result |
+|---|---|
+| Deploy fingerprint | `/healthz` `build` == HEAD, `app: llms` |
+| dimll in production | **2.7.1** (read from installed metadata, not prose) |
+| Clerk / auth wiring | both halves — `POST /api/auth/session` → `401 {"authenticated":false}`, **not** the 405 that signals `register()` without `configure_app()` |
+| Store persistence | "Not persistent" banner **gone**; store resolves to `/var/data/policy_overrides.json` |
+| Both batteries vs the domain | network_smoke 9/9; smoke_live 89/90 — the single warning is a PEER host serving HTML at its llms.txt, scoped by the script as "not this deployment" |
+| Showcases, human + crawler | all three: 200, exactly one `<h1>`, real prose, no stub, on both lanes |
+| Map click → write | Antarctica clicked → `AQ` → toggled → painted red, badge, store written |
+| Un-deny → recovery | `AQ is allowed again`; denylist back to the owner's six |
+| Hub row | `llms.2plot.dev — 55 bot hits · 12 unique crawlers/day · reported 10m ago`, alongside peers at 2–27m. **No gap**, reporter ACTIVE |
+
+### The geo investigation — a false alarm, and what it cost to prove
+
+Every request to a denied country returned **200**, on the domain *and* on the
+Render origin. That looked like the guardrail failing in production while the
+board and the public showcase both showed countries denied.
+
+It was not. **Render fronts `*.onrender.com` with Cloudflare too** (`server:
+cloudflare`, `cf-ray` on the origin), so on *both* hostnames Cloudflare
+overwrites a client-supplied `CF-IPCountry` with the true client country. My
+spoof never reached the app. Every 200 was the correct answer for a US
+visitor against a denylist that does not contain US.
+
+That is the documented trust model holding — and holding *better* than
+documented: GEO.md warns that a client reaching the origin directly can
+spoof, and on this platform there is no direct-to-origin path to reach.
+
+**What made it diagnosable was making it observable.** Ruling this out from
+outside took: the public showcase (store readable), ClaudeBot → 403
+(middleware running), the `text/plain` ramp (headers arriving), and a local
+replay of the exact production store on the exact deployed commit (451). None
+of those is the actual question, which is *"what country does this request
+resolve to?"* — the check GEO.md calls mandatory and points at the
+token-gated operator panel for. On a host where nobody has that token, the
+mandatory check is unavailable.
+
+So `/healthz` now carries it: `geo: {configured, denied, resolved}`. Counts
+and a resolution trace, never the country codes.
+
+### Two inherited defects found while adding that
+
+1. **The health payload was a snapshot.** `register_health_route` computed it
+   once at registration and closed over the dict. Harmless while every field
+   was static — and the route is registered ~150 lines before `configure_geo`
+   runs, so the first version of this diagnostic reported the guardrail
+   UNCONFIGURED on a host where it is configured. The diagnostic lying in
+   exactly the situation it exists for. Now built per request.
+
+2. **FastAPI had its own payload.** `lib/asgi_routes.py` constructed
+   `HealthResponse` independently and never called `health_payload`, so a
+   FastAPI deployment silently lacked `build` — and `cd.yml`'s build-match
+   wait polls for precisely that field. It would have fallen into the
+   "predates the build field" path forever, verifying whichever release
+   happened to be serving: the muicharts defect that wait exists to prevent,
+   reintroduced per-backend. Both backends now render from one function.
+
+### Still unproven, and why
+
+The 451 itself has **not** been observed on production. Proving it requires a
+request that Cloudflare labels with a denied country — which, since spoofing
+is impossible here, means denying the country the tester is actually in. That
+is a deliberate brief outage for real visitors and is the owner's call, not
+a verification pass's.
+
+Everything either side of it is proven: the store writes, the config reads it
+(`denied: 6`), the resolution works (`US (via cf-ipcountry)`), and the exact
+production store on the exact deployed commit answers 451 locally across all
+ten surface classes.
+
+### Dependabot
+
+Five floor-raise PRs closed with reasons, none rebased or merged — the change
+itself was the problem, not its base. `.github/dependabot.yml` now restricts
+pip **version**-updates to `dash*`/`plotly*`/`markdown2dash`, mirroring
+dash-documentation-boilerplate `ab22fd7` (a commit this fork's first push
+prompted). Security updates are unaffected — separate channel. PRs #1 (base
+image 3.11.8 → 3.14.7) and #2 (actions group) are different ecosystems, are
+real decisions, and stay open.

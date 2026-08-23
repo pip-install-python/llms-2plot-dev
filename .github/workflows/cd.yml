@@ -1,12 +1,37 @@
 name: CD
 
-# Deploys boilerplate.2plot.dev, then checks the live site.
+# Deploys llms.2plot.dev, then checks the live site.
+#
+# ============================ B3 TODO =====================================
+# THE LIVE HALF OF THIS WORKFLOW IS DORMANT UNTIL A RENDER SERVICE EXISTS.
+#
+# Everything that touches a running host — the build-match wait and the whole
+# `verify` job — is gated on the repository variable `SITE_URL`. While it is
+# unset those steps skip with a notice and CD is effectively "CI plus an
+# optional deploy trigger".
+#
+# This is not caution for its own sake. The template shipped
+# SITE_URL=https://boilerplate.2plot.dev hard-coded, so an unguarded run here
+# would poll ANOTHER SITE's /healthz for fifteen minutes waiting for a commit
+# it will never serve, then battery it and report red — a fork failing CD on
+# day one over a host it does not own. (Same class as the excalidraw finding:
+# inherited workflows reference things that do not exist in the fork and
+# deploy hosts that are not yours.) Pointing it at llms.2plot.dev today is no
+# better: that domain still serves the OUTGOING site this migration replaces.
+#
+# TO UNGUARD, in two steps, no workflow edit either time:
+#   B3 (staging): set the repo variable SITE_URL to the service's
+#                 https://<name>.onrender.com URL. The wait and the battery
+#                 come alive against staging.
+#   B5 (cutover): change that same variable to https://llms.2plot.dev once
+#                 the domain moves.
+# ==========================================================================
 #
 # The deploy step POSTs to a Render deploy hook held in the
 # RENDER_DEPLOY_HOOK_URL secret. Without that secret the step is skipped and
 # the workflow goes straight to verification — useful when Render is already
-# auto-deploying from GitHub on its own, and it means a fork of this template
-# doesn't fail CD on day one for a secret it was never given.
+# auto-deploying from GitHub on its own, and it means this repo doesn't fail
+# CD on day one for a secret it was never given.
 on:
   push:
     branches: [main]
@@ -26,7 +51,10 @@ concurrency:
 
 env:
   PIP_DISABLE_PIP_VERSION_CHECK: "1"
-  SITE_URL: ${{ inputs.target_url || 'https://boilerplate.2plot.dev' }}
+  # No hard-coded fallback, deliberately: an empty SITE_URL is the signal
+  # that no service exists yet, and every live step keys off it. A default
+  # here would silently re-point this workflow at somebody else's host.
+  SITE_URL: ${{ inputs.target_url || vars.SITE_URL }}
 
 jobs:
   test:
@@ -44,10 +72,19 @@ jobs:
     timeout-minutes: 20
     environment:
       name: production
-      url: https://boilerplate.2plot.dev
+      # B3 TODO: restore `url: ${{ inputs.target_url || vars.SITE_URL }}`
+      # when SITE_URL is set. Omitted while dormant rather than evaluated to
+      # an empty string — the deployment panel simply shows no link, and the
+      # first run in this repo's history does not hinge on how GitHub treats
+      # a blank environment URL.
     outputs:
       deployed: ${{ steps.hook.outputs.deployed }}
     steps:
+      - name: Say plainly that the live half is dormant
+        if: env.SITE_URL == ''
+        run: |
+          echo "::notice::No Render service yet — SITE_URL repo variable is unset, so the build-match wait and the live batteries are skipped. Set SITE_URL to the .onrender.com URL at B3 to bring them up (see this workflow's header)."
+
       - name: Trigger the Render deploy hook
         id: hook
         env:
@@ -62,6 +99,10 @@ jobs:
           echo "deployed=true" >> "$GITHUB_OUTPUT"
 
       - name: Wait for THIS build to serve traffic
+        # B3 TODO: skips while SITE_URL is unset — see the header. Without
+        # this guard the loop below polls a host this repo does not own for
+        # fifteen minutes and then fails the run.
+        if: env.SITE_URL != ''
         # NOT gated on the hook step: with RENDER_DEPLOY_HOOK_URL unset,
         # Render's own autoDeploy ships the commit minutes after the push —
         # and the old shape skipped this wait and ran the battery three
@@ -105,7 +146,12 @@ jobs:
   verify:
     name: verify the live site
     needs: [deploy]
-    if: always() && needs.deploy.result != 'cancelled'
+    # B3 TODO: the whole job is dormant until SITE_URL names a real service.
+    # `vars.SITE_URL` rather than `env.SITE_URL` because job-level `if` is
+    # evaluated before the job's env context exists.
+    if: >-
+      always() && needs.deploy.result != 'cancelled'
+      && (inputs.target_url || vars.SITE_URL) != ''
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

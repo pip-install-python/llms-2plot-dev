@@ -1,8 +1,8 @@
-# CI for boilerplate.2plot.dev — and the TEMPLATE every 2plot satellite copies.
+# CI for llms.2plot.dev — the documentation site for dash-improve-my-llms.
 #
-# This repo is the one the other documentation sites are forked from, so the
-# shape of this file is part of the deliverable. It implements the network's
-# CI baseline (2plot.ai and 2plot.dev run the same one):
+# Inherited from dash-documentation-boilerplate, which is where the shape of
+# this file is the deliverable. Here it is just the network's CI baseline
+# (2plot.ai and 2plot.dev run the same one):
 #
 #   * least-privilege `permissions` and a cancel-in-progress `concurrency`
 #     group, so a workflow cannot write more than it reads and a rapid second
@@ -18,8 +18,9 @@
 #     provable when nothing is configured;
 #   * an advisory pip-audit.
 #
-# A fork changes the matrix and the image name. Everything else is the
-# standard; see the 2plot network standard on boilerplate.2plot.dev.
+# A fork changes the matrix and the image name — both done here. Everything
+# else is the standard; see the 2plot network standard on
+# boilerplate.2plot.dev (the template's own live site, not this one).
 
 name: CI
 
@@ -215,7 +216,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          tags: dash-docs-boilerplate:ci
+          tags: llms-2plot-dev:ci
           load: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -224,7 +225,7 @@ jobs:
       # are asserted here, inside the artifact that actually ships.
       - name: Version fingerprints inside the image
         run: |
-          docker run --rm dash-docs-boilerplate:ci python -c "
+          docker run --rm llms-2plot-dev:ci python -c "
           from importlib.metadata import version
 
           def parts(v):
@@ -256,7 +257,7 @@ jobs:
       # platform loops the worker and the deploy never goes live.
       - name: Boot the container and wait for /healthz
         run: |
-          docker run -d --name docs -p 8550:8550 dash-docs-boilerplate:ci
+          docker run -d --name docs -p 8550:8550 llms-2plot-dev:ci
           for i in $(seq 1 60); do
             if curl -sf http://127.0.0.1:8550/healthz > /dev/null; then
               echo "healthy after ~$((i*2))s"
@@ -273,8 +274,9 @@ jobs:
           docker logs --tail 100 docs
           exit 1
 
-      # The SAME script CD runs against https://boilerplate.2plot.dev, so a
-      # failure in CI and a failure in production read identically.
+      # The SAME script CD runs against the live host (once B3 sets the
+      # SITE_URL repo variable — see cd.yml's header), so a failure in CI and
+      # a failure in production read identically.
       - name: Smoke battery against the booted container
         run: python3 scripts/network_smoke.py --base-url http://127.0.0.1:8550
 

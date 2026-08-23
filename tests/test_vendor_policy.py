@@ -17,8 +17,6 @@ Fixed in the pre-tag batch and asserted positively below.
 """
 from __future__ import annotations
 
-import re
-
 import pytest
 
 

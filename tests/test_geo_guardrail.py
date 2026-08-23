@@ -23,7 +23,7 @@ import re
 import pytest
 
 
-from conftest import BROWSER_ACCEPT, BROWSER_UA, CRAWLER_UA
+from conftest import BROWSER_UA, CRAWLER_UA
 
 DENIED = "RU"
 ALLOWED = "US"
@@ -114,16 +114,30 @@ def _get(client, path, country=None, **kwargs):
 def test_the_nonce_mask_is_sound(client):
     """The control for every byte-identical assertion in this file.
 
-    If masking `end_id` were hiding something, two identical requests would
-    still differ after the mask — and every "byte-identical" test below would
-    be vacuous.
+    Two properties, and neither depends on the Dash version. An earlier
+    version of this test asserted that two identical requests DIFFER — true
+    on Dash 4.4.1, which stamps a per-request `end_id` nonce, and false on
+    4.4.0, which does not. That made a control test fail on the matrix leg
+    pinning the older Dash, for a reason that had nothing to do with geo.
     """
     a, b = client.get("/"), client.get("/")
-    assert a.text != b.text, (
-        "two identical requests are byte-identical — the nonce mask is now "
-        "unnecessary and should be deleted rather than left hiding changes"
+
+    # 1. Sound: masking makes two identical requests compare equal, whether
+    #    or not this Dash stamps a nonce.
+    assert _stable(a.text) == _stable(b.text), (
+        "two identical requests differ even after masking — the byte-"
+        "identical assertions below cannot mean anything"
     )
-    assert _stable(a.text) == _stable(b.text)
+
+    # 2. Not over-broad: it must NOT equalise genuinely different documents.
+    #    A mask that swallowed real differences would make every
+    #    byte-identical test in this file vacuous, which is the failure worth
+    #    guarding against.
+    other = client.get("/getting-started")
+    assert _stable(a.text) != _stable(other.text), (
+        "the mask equalises two different pages — it is removing more than "
+        "the nonce"
+    )
 
 
 @pytest.mark.parametrize("label,path", SURFACES.items(), ids=list(SURFACES))

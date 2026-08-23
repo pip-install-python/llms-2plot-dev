@@ -22,8 +22,6 @@ from __future__ import annotations
 import html as _html
 import re
 
-import pytest
-
 from conftest import BROWSER_UA, CRAWLER_UA
 
 PRERENDER_OPEN = '<div id="dimll-prerender"'

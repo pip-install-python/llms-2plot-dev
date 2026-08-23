@@ -296,7 +296,12 @@ subprocess.
   `POLICY_STORE_FILE` disk entry — deliberately, since the service does not
   exist and inventing its shape now would be guessing.
 
-**Genuinely blocked on the package publishing:**
+**Genuinely blocked on the package publishing:** — ***cleared 2026-08-23,
+see the Phase B section of [DEVELOPMENT-LOG.md](DEVELOPMENT-LOG.md).*** The
+floor moved to `>=2.7.1` (2.7.0 published 17:48Z, the 2.7.1 fast-follow
+18:24Z), the capability block is deleted, and the resolution was re-proved
+from PyPI in a fresh Python 3.12 venv.
+
 
 - The `requirements.txt` floor stays `>=2.6.1`. Every 2.7.0 call site is
   behind a `LLMS_HAS_27` **capability** probe (not a version compare, so a

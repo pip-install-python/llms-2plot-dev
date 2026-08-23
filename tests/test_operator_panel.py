@@ -360,8 +360,8 @@ def test_a_denied_country_gets_451_even_with_the_right_token(app_module, client,
         )
 
 
-def test_geo_denies_the_panel_before_the_token_is_even_checked(app_module, client,
-                                                              no_token):
+def test_geo_denies_the_panel_before_the_token_is_even_checked(
+        app_module, client, no_token):
     """Ordering matters: a 404 here would leak that geo runs after the gate."""
     from lib import policy_store
 

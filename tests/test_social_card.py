@@ -317,9 +317,6 @@ def test_the_index_template_is_still_wired_in(app_module):
 
 def test_the_home_hero_is_the_social_card_object():
     """The hero renders from the same constant, not a second copy."""
-    import runpy
-    import dash
-
     from lib.constants import OG_IMAGE_URL
 
     source = (REPO_ROOT / "pages" / "home.py").read_text()

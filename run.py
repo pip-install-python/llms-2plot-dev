@@ -239,6 +239,7 @@ def _rate_ceiling():
         return None
     return value if value > 0 else None
 
+
 if DASH_VERSION < (4, 4):
     # Fatal only on FastAPI, where it is not a degradation but an outage:
     # 4.3.0's ASGI middleware returns before setting the request context, so

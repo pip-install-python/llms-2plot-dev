@@ -151,10 +151,10 @@ The suite boots `run.py` itself rather than a test app, secretless — the
 zero-secret boot is the first invariant, and every fail-closed assertion
 depends on it.
 
-Tests that exercise `dash-improve-my-llms` 2.7.0 features carry
-`pytestmark = requires_dimll_27` and **skip** on the pinned 2.6.1 floor, so a
-clean `pip install -r requirements.txt` gives a green suite rather than a red
-one people learn to ignore.
+Every test runs unconditionally. The `requires_dimll_27` skip marker was
+removed with the floor bump: once `requirements.txt` guarantees the feature,
+a skipif that can never fire is a suite quietly overstating its own
+coverage.
 
 ---
 
@@ -212,9 +212,17 @@ reconstructed component id.
 
 ## Status
 
-`dash-improve-my-llms` **2.7.0** is not on PyPI yet. `requirements.txt` still
-floors at `>=2.6.1`, and every 2.7.0 call site is behind a capability probe
-(`LLMS_HAS_27` in `run.py`) so the app boots on either.
+`dash-improve-my-llms` **2.7.1** is on PyPI and `requirements.txt` floors
+there. The `LLMS_HAS_27` capability block that let this app boot on either
+release is gone — collapsed to a plain import, which was its stated design
+promise.
+
+**Not deployed yet.** There is no Render service, so the live half of
+`cd.yml` — the build-match wait and both live batteries — is dormant, gated
+on an unset `SITE_URL` repository variable. Setting that variable to the
+service's `.onrender.com` URL brings it up at B3; changing it to
+`https://llms.2plot.dev` at cutover is the only other edit. See the header of
+`.github/workflows/cd.yml`.
 
 | Document | What it carries |
 |---|---|

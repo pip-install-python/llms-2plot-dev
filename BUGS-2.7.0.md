@@ -1,16 +1,40 @@
 # BUGS-2.7.0.md — the pre-release soak report
 
-**Soaked:** 2026-08-22 · **Package:** `dash_improve_my_llms-2.7.0-py3-none-any.whl`
+**Soaked:** 2026-08-22 · **Re-soaked:** 2026-08-23 against the pre-tag fix
+batch · **Package:** `dash_improve_my_llms-2.7.0-py3-none-any.whl`
+`sha256:b91411257750aa1b4f2717ff41eff88717f50d6682c49ae009f8ce5c5e286d56`
 (local pre-release artifact, tag `v2.7.0` unpushed) · **Host:**
 `llms-2plot-dev` (fork of `dash-documentation-boilerplate` 1.6.7, the future
 llms.2plot.dev) · **Backends:** Flask and FastAPI, every finding reproduced on
 both.
 
-**This file gates the `v2.7.0` tag push.** Two findings are real defects and
-one of them is an availability bug; two more are documentation statements the
-implementation contradicts. Nothing here blocks the release architecturally —
-the seam works, the panel works, the guardrail covers every surface — but #1
-should not ship as it stands.
+**This file gates the `v2.7.0` tag push.**
+
+## Re-soak verdict, 2026-08-23 — TAG HELD
+
+**#1, #2, #3 and #4 are all FIXED and verified.** The eight strict xfails
+that pinned them flipped to XPASS on the rebuilt wheel — the signal fired —
+and every one has been converted to a positive assertion. The two SEO-batch
+fixes are pinned as well.
+
+**One new finding holds the tag: #5.** It is **not a regression** — 2.6.1
+carries it identically — but it is the *same defect* the batch's own H1 dedup
+set out to fix, left unfixed on the other of the package's two document
+paths, and that path is the one Googlebot actually receives. Per the re-soak
+charter, anything not green is a new entry and the tag stays held; the call
+on whether to ship anyway is the owner's, and #5 carries what is needed to
+make it.
+
+| # | Was | Now |
+|---|---|---|
+| 1 | unhashable denylist entry 500s every request | **fixed** — empty denylist, nobody blocked, nothing 500s |
+| 2 | traditional per-vendor block enforced, not published | **fixed** — `User-agent: Googlebot / Disallow: /` is emitted |
+| 3 | GEO.md contradicted the malformed-entry behaviour | **fixed in docs** — code was right, doc moved |
+| 4 | GEO.md contradicted the resolver failure shapes | **fixed in docs** — both shapes now stated distinctly |
+| 5 | — | **NEW** — crawler-document H1 duplication, every page |
+
+Re-soak totals: **585 passed / 1 skipped / 1 xfailed** (Flask) ·
+**582 / 4 / 1** (FastAPI). The single xfail is #5.
 
 ## What the soak was
 
@@ -59,7 +83,7 @@ day the package fixes them and the markers have to come out.
 
 ---
 
-## #1 — HIGH — a `deny_countries` callable returning an unhashable entry 500s every request
+## #1 — ~~HIGH~~ **FIXED 2026-08-23** — a `deny_countries` callable returning an unhashable entry 500s every request
 
 **Contradicts a documented guarantee.** `docs/GEO.md`: *"a raising callable or
 a malformed entry is logged once and treated as an empty denylist
@@ -165,7 +189,7 @@ once it is reached; only the hash on the way to it is fatal.
 
 ---
 
-## #2 — HIGH — a per-vendor block on a *traditional* crawler is enforced but never published
+## #2 — ~~HIGH~~ **FIXED 2026-08-23** — a per-vendor block on a *traditional* crawler is enforced but never published
 
 **Contradicts the W2 contract.** CHANGELOG [2.7.0]: *"One fold
 (`vendors.effective_policies`) drives robots.txt AND the middleware"* — so
@@ -264,7 +288,7 @@ halves of the diagnosis in place.
 
 ---
 
-## #3 — LOW (docs) — a malformed *entry* does not void the denylist
+## #3 — ~~LOW (docs)~~ **FIXED 2026-08-23 in GEO.md** — a malformed *entry* does not void the denylist
 
 `docs/GEO.md`, "the reloadable seam":
 
@@ -291,7 +315,7 @@ and be wrong.
 Pinned by `tests/test_geo_guardrail.py::test_a_malformed_entry_does_not_void_the_whole_list`
 (asserting the code's behaviour, with the disagreement in the docstring).
 
-## #4 — LOW (docs) — a raising `resolver=` falls back to headers, it does not go "unknown"
+## #4 — ~~LOW (docs)~~ **FIXED 2026-08-23 in GEO.md** — a raising `resolver=` falls back to headers, it does not go "unknown"
 
 `docs/GEO.md`, "Resolution order":
 
@@ -310,6 +334,103 @@ value** returns `None` immediately and does *not* fall back.
 Both behaviours are defensible; neither is what the doc says. Pinned by
 `test_a_raising_resolver_falls_back_to_headers` and
 `test_a_resolver_returning_garbage_does_not_fall_back`.
+
+---
+
+## #5 — MEDIUM — the H1 dedup missed the crawler document, so every page ships two identical `<h1>`s to Googlebot
+
+**Found on the re-soak, 2026-08-23.** Not a regression — 2.6.1 carries it
+identically — but it is the same defect the batch's own fix targets, on the
+half that matters more for search.
+
+### The two document paths
+
+The package serves two different documents, and the fix landed on one:
+
+| Requester | Document | Built by | H1s per page |
+|---|---|---|---|
+| browser-like UA | app shell + universal prerender | `prerender.py` | **1** ✅ |
+| declared crawler / any non-browser UA | static crawler document | `html_generator.generate_static_page_html` | **2** ❌ |
+
+`prerender.py:204` carries the fix, and its own comment states the finding:
+
+```python
+# SEO-audit finding (2026-08-23, confirmed on every host): the header's
+# h1 duplicated the doc body's own opening markdown H1 — two identical
+# h1s on every prerendered page.
+prose_opens_with_h1 = prose.lstrip().lower().startswith("<h1")
+if prose_opens_with_h1:
+    header = f"<header><p>{description}</p></header>"
+else:
+    header = f"<header><h1>{name}</h1><p>{description}</p></header>"
+```
+
+`html_generator.py:328` has no such guard:
+
+```python
+<header>
+    <h1>{title}</h1>          # <-- unconditional
+    <p>{description}</p>
+</header>
+...
+<main>
+    {body_html}               # <-- opens with the prose's own <h1>
+```
+
+### Repro
+
+Fetch any page with a crawler User-Agent and count:
+
+```bash
+curl -s -A 'Googlebot/2.1' https://host/getting-started | grep -c '<h1'
+# 2
+```
+
+Measured on this app, **all 11 pages, both backends**, and the pair is
+byte-identical every time:
+
+```
+/                          h1=2  ['Dash Improve My LLMs — …', 'Dash Improve My LLMs — …']
+/getting-started           h1=2  ['Getting Started', 'Getting Started']
+/reference/configuration   h1=2  ['Configuration', 'Configuration']
+…11/11
+```
+
+**Expected:** one `<h1>` per document, as the prerender path now produces.
+**Actual:** two identical ones, in `<header>` and again at the top of
+`<main>`.
+
+### Why it is worth fixing before the tag
+
+The prerender path serves browsers. The crawler-document path serves
+**Googlebot, ClaudeBot, GPTBot and every AI fetcher** — the audience the
+whole package exists for. Fixing the h1 signal for humans and leaving it
+broken for search engines inverts the priority the fix was written with.
+
+It is also cheap: the same three-line guard, moved.
+
+### Suggested fix
+
+Apply `prerender.py`'s test to `html_generator.py`:
+
+```python
+body_opens_with_h1 = body_html.lstrip().lower().startswith("<h1")
+header_h1 = "" if body_opens_with_h1 else f"<h1>{title}</h1>"
+```
+
+### Pinned by
+
+`tests/test_prerender_seo.py::test_the_crawler_document_has_exactly_one_h1`
+(`xfail(strict=True)`), with
+`test_the_crawler_document_is_still_the_one_crawlers_get` as the control so
+the finding cannot silently change shape.
+
+### Related, and fixed on this side
+
+`templates/index.html` shipped an `<h1>` in its `<noscript>` block, giving
+the *browser* document a second, site-wide h1 that competed with the page's
+own — a crawler runs no JS and parses noscript. Demoted to `<h2>` here. Same
+defect class, one layer out, and worth a line in the boilerplate.
 
 ---
 
@@ -402,6 +523,19 @@ someone "fixes" it.
 
 ## Recommendation
 
+**Superseded by the 2026-08-23 re-soak verdict at the top of this file.**
+Items 1–4 below are done. What remains:
+
+- **Fix #5**, or ship with it recorded as a known limitation. It is not a
+  regression, so shipping does not make anything worse — but the batch's
+  stated purpose was this exact defect, and it is unfixed on the path search
+  engines use.
+- The eight strict xfails for #1 and #2 are gone, replaced by positive
+  assertions. One strict xfail remains, on #5: it will fail the moment #5 is
+  fixed, which is the signal for the next re-soak.
+
+<details><summary>The original 2026-08-22 recommendation, kept for the record</summary>
+
 1. Fix **#1** — it is a total-outage path that contradicts an explicit
    guarantee, the change is four lines, and 2.8's matrix makes it more likely
    to be hit, not less.
@@ -416,3 +550,5 @@ someone "fixes" it.
    here, and run `pytest` plus `DASH_BACKEND=fastapi pytest`. The eight strict
    xfails become XPASS-failures the moment #1 and #2 are fixed, which is the
    signal the fixes landed; then delete the markers and keep the tests.
+
+</details>

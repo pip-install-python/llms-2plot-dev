@@ -390,7 +390,13 @@
 
     <noscript>
         <div style="padding: 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; line-height: 1.6;">
-            <h1>Dash Improve My LLMs — the AI and crawler surface for Dash apps</h1>
+            <!-- h2, not h1, deliberately. The universal prerender injects the
+                 PAGE's h1 into #react-entry-point, and a crawler runs no JS —
+                 so it parses this noscript block too. An h1 here would give
+                 every page on the site a second, site-wide h1 competing with
+                 the one that names the page. Same defect class as the 2.7.0
+                 SEO batch's prerender H1-dedup, one layer out. -->
+            <h2>Dash Improve My LLMs — the AI and crawler surface for Dash apps</h2>
             <p><strong>This application requires JavaScript to run.</strong></p>
 
             <h2>For AI/LLM Access and Documentation:</h2>

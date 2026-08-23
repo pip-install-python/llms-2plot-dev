@@ -11,8 +11,9 @@ directions that matter:
 * every per-vendor OVERRIDE the control board can write, across all three
   vendor classes and all three actions.
 
-The second sweep is where the fold stops holding — see the xfail below and
-BUGS-2.7.0.md #2.
+The second sweep is where the fold used to stop holding: a per-vendor block
+on a TRADITIONAL crawler was enforced but never published (BUGS-2.7.0.md #2).
+Fixed in the pre-tag batch and asserted positively below.
 """
 from __future__ import annotations
 
@@ -215,34 +216,50 @@ def test_meter_renders_as_allow_and_behaves_as_allow(client):
     assert client.get("/", user_agent=TRAINING_UA).status == 200
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BUGS-2.7.0.md #2 — robots_generator.py:196 renders the traditional "
-    "class ONLY in the `allow_traditional=False` branch, and line 150 "
-    "excludes traditional vendors from the AI-blocked section. So with the "
-    "default allow_traditional=True a per-vendor block on Googlebot/Bingbot/"
-    "Slurp/DuckDuckBot is ENFORCED (403) but never PUBLISHED — `User-agent: "
-    "*  Allow: /` still governs. Remove this marker when the package fixes it."
-))
 @pytest.mark.parametrize("vendor_key", ["googlebot", "bingbot", "slurp",
                                         "duckduckbot"])
 def test_a_traditional_vendor_block_is_published_as_well_as_enforced(
         client, vendor_key):
-    """W2's contract, on the one class where it does not hold.
+    """WAS BUGS-2.7.0.md #2, fixed in the pre-tag batch.
 
-    An operator blocking a misbehaving traditional crawler from the board
-    gets a site that 403s Googlebot while its own robots.txt says `Allow: /`.
-    Search Console fills with crawl errors and the site can be deindexed —
-    and the published promise says nothing is wrong.
+    W2's contract on the one class where it used to fail. With the default
+    allow_traditional=True a per-vendor block on a traditional crawler was
+    ENFORCED (403) but never PUBLISHED — `User-agent: *  Allow: /` still
+    governed. An operator blocking a misbehaving crawler from the board got
+    a site that 403s Googlebot while its own robots.txt says it is welcome:
+    Search Console fills with crawl errors and the published promise insists
+    nothing is wrong.
+
+    All three halves are asserted now — the effective verdict, the vendor's
+    OWN group, and the served status.
     """
     from dash_improve_my_llms.vendors import VENDORS
 
     vendor = next(v for v in VENDORS if v.key == vendor_key)
+    token = vendor.robots_tokens[0]
     _set(vendor_key, "block")
 
-    published = robots_verdict(client.get("/robots.txt").text, vendor.robots_tokens[0])
+    robots = client.get("/robots.txt").text
+
+    published = robots_verdict(robots, token)
     assert published == "block", (
         f"{vendor_key}: enforced as block but robots.txt publishes "
         f"{published!r} — says != does"
+    )
+
+    # Its OWN group, not one inherited from `*`. The bug was precisely that
+    # the vendor fell through to `User-agent: *`, and a check that only
+    # resolves the effective verdict would start passing again for the wrong
+    # reason the day the `*` group flipped to Disallow.
+    assert f"User-agent: {token}" in robots, (
+        f"{vendor_key}: robots.txt emits no group of its own for {token} — "
+        "the verdict is being inherited from `*` rather than published"
+    )
+
+    served = client.get("/", user_agent=_ua_for(vendor_key)).status
+    assert served == 403, (
+        f"{vendor_key}: published as blocked but served {served} — the same "
+        "drift in the other direction"
     )
 
 

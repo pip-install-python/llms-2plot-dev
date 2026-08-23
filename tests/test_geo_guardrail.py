@@ -351,14 +351,12 @@ def test_a_raising_resolver_does_not_deny(app_module, client):
 
 
 def test_a_raising_resolver_falls_back_to_headers(app_module, client):
-    """Documented behaviour differs from GEO.md — see BUGS-2.7.0.md #4.
+    """WAS BUGS-2.7.0.md #4 — a doc/code disagreement, resolved in the docs.
 
-    GEO.md's resolution order says "exceptions -> unknown, warned once",
-    which reads as "the request is unknown". The implementation logs
-    "falling back to header resolution" and does exactly that, so an edge
-    header still resolves. This test pins what the CODE does, because that
-    is what an operator's traffic will meet; the doc is the half that should
-    move.
+    GEO.md's resolution order now states both resolver failure shapes
+    distinctly: one that RAISES is warned once and falls back to the headers
+    below, so a real CF-IPCountry still blocks a denied country. That is what
+    the code always did; the doc moved to match, which was the recommendation.
     """
     def boom(headers):
         raise RuntimeError("geo-ip database unavailable")
@@ -368,8 +366,9 @@ def test_a_raising_resolver_falls_back_to_headers(app_module, client):
 
 
 def test_a_resolver_returning_garbage_does_not_fall_back(app_module, client):
-    """The asymmetry worth knowing about: raising falls back to headers,
-    returning an invalid value does not."""
+    """The other half of #4, now documented: a resolver that RETURNS an
+    invalid value answered — badly — so the result is unknown with NO header
+    fallback. The override stands, even when it is wrong."""
     _deny(app_module, resolver=lambda headers: "NOPE")
     assert client.get("/", headers={"CF-IPCountry": DENIED}).status != 451
 
@@ -450,38 +449,51 @@ def test_a_non_sequence_callable_fails_open(app_module, client, junk):
 
 
 def test_a_malformed_entry_does_not_void_the_whole_list(app_module, client):
-    """Pins the CODE's behaviour, which GEO.md contradicts — BUGS-2.7.0.md #3.
+    """WAS BUGS-2.7.0.md #3 — a doc/code disagreement, resolved in the docs.
 
-    The doc says "a raising callable OR A MALFORMED ENTRY is ... treated as
-    an empty denylist (fail-open)". The implementation skips the bad entry
-    with a warn-once and keeps the valid ones, which is the more useful
-    behaviour — but an operator who reads the doc and finds `["RU", "XX"]`
-    in the store will predict that nobody is blocked, and RU is.
+    GEO.md now says it outright: a malformed entry in an otherwise-valid list
+    is skipped and logged once, and the valid entries keep blocking, because
+    voiding a whole compliance denylist over one stale entry would be the
+    worse failure. `["RU", "XX", "nonsense"]` still blocks RU.
     """
     app_module.configure_geo(deny_countries=lambda: ["RU", "XX", "nonsense"])
     assert client.get("/", headers={"CF-IPCountry": "RU"}).status == 451
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "BUGS-2.7.0.md #1 — geo.py:221 `_callable_cache.get(raw)` sits OUTSIDE "
-    "the try/except that catches callable failures, so an unhashable element "
-    "in the returned sequence raises TypeError out of gate() and every "
-    "request on every surface 500s. Contradicts GEO.md's 'it can never take "
-    "down the request path'. Remove this marker when the package fixes it."
-))
 @pytest.mark.parametrize("junk", [
     [{"code": "RU"}], [["RU"]], [{"RU"}], ["RU", {"x": 1}],
 ], ids=["list-of-dicts", "list-of-lists", "list-of-sets", "valid-plus-dict"])
-def test_an_unhashable_entry_fails_open(app_module, client, junk):
-    """The store is JSON. A hand-edit, a schema change, or 2.8's bot x
-    country matrix written by a newer worker all produce nested objects
-    here — and the contract says the worst that may happen is no blocking.
+def test_an_unhashable_entry_yields_an_empty_denylist(app_module, client, junk):
+    """WAS BUGS-2.7.0.md #1, fixed in the pre-tag batch.
+
+    An unhashable element in the returned sequence used to raise TypeError
+    out of `gate()` and 500 EVERY request on EVERY surface. GEO.md now states
+    the contract explicitly: a raising callable, or one returning something
+    unhashable, is logged once and treated as an **empty denylist** — nobody
+    blocked, nothing 500s.
+
+    The store is JSON. A hand-edit, a schema change, or 2.8's bot x country
+    matrix written by a newer worker all produce nested objects here, so this
+    is the shape a rolling deploy actually meets.
+
+    Note `valid-plus-dict`: one nested object voids the WHOLE list, which is
+    deliberately different from a malformed *string* entry (skipped, valid
+    entries keep blocking — see the test below). The two shapes degrade
+    differently on purpose.
     """
+    baseline = client.get("/").status
+
     app_module.configure_geo(deny_countries=lambda: junk)
     r = client.get("/", headers={"CF-IPCountry": DENIED})
+
     assert r.status != 500, (
         f"deny_countries returning {junk!r} took the whole site down with a "
-        "500 — every surface, every visitor, every country."
+        "500 — every surface, every visitor, every country. This is the "
+        "regression BUGS-2.7.0.md #1 recorded."
+    )
+    assert r.status == baseline, (
+        f"returning {junk!r} must behave as an EMPTY denylist — a denied "
+        f"country's request should be served normally, got {r.status}"
     )
 
 

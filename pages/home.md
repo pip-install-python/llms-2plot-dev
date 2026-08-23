@@ -1,6 +1,6 @@
 # Dash Improve My LLMs — the AI and crawler surface for Dash apps
 
-![logo](/assets/intro_img.jpg)
+![dash-improve-my-llms](/assets/hero.png)
 
 > **`dash-improve-my-llms` — the crawler, agent and SEO companion every Dash app mounts in one line.** By [Pip Install Python](https://2plot.dev).
 

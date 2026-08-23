@@ -71,7 +71,7 @@ def test_the_viewer_brand_chip_is_not_a_framework_default(client):
 
     from conftest import BROWSER_ACCEPT
 
-    page = client.get("/backends/llms.txt", accept=BROWSER_ACCEPT).text
+    page = client.get("/reference/configuration/llms.txt", accept=BROWSER_ACCEPT).text
     # The banner is templated markup, so the brand arrives escaped — the
     # apostrophe in "network's" becomes `&#x27;`. Comparing the raw string
     # here would fail for a reason that has nothing to do with identity.
@@ -234,7 +234,7 @@ def test_no_source_markdown_hardcodes_a_package_version():
 def test_version_placeholder_never_leaks_unsubstituted(client):
     from lib.constants import BASE_URL  # noqa: F401 — client is same-host
 
-    for path in ("/llms.txt", "/", "/examples/ai-integration/llms.txt"):
+    for path in ("/llms.txt", "/", "/reference/access/llms.txt"):
         body = client.get(path).text
         assert "{{DIMLL_VERSION}}" not in body, f"unsubstituted placeholder on {path}"
         assert "{{VERSION:" not in body, f"unsubstituted placeholder on {path}"

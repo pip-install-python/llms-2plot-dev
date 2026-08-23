@@ -66,10 +66,10 @@ BOT = dict(ip="2.2.2.2", ua="GPTBot/1.0", device_type="bot")
 MACHINE_SURFACES = [
     "/llms.txt", "/llms-small.txt", "/llms-full.txt",
     "/robots.txt", "/sitemap.xml",
-    "/backends/llms.txt", "/backends/page.json",
+    "/reference/configuration/llms.txt", "/reference/configuration/page.json",
 ]
 
-PAGE_SURFACES = ["/", "/backends", "/examples/ai-integration"]
+PAGE_SURFACES = ["/", "/reference/configuration", "/reference/access"]
 
 
 @pytest.mark.parametrize("path", MACHINE_SURFACES)
@@ -145,13 +145,13 @@ def test_mixed_day_totals_and_the_bot_split(tmp_path):
     updating, the hub's axes changed and every satellite must move together."""
     ledger = _ledger(tmp_path, [
         # a human: two page views (one session), then their agent grabs a twin
-        _visit("/backends", minute=1),
-        _visit("/examples/ai-integration", minute=5),
-        _visit("/backends/llms.txt", minute=6),
+        _visit("/reference/configuration", minute=1),
+        _visit("/reference/access", minute=5),
+        _visit("/reference/configuration/llms.txt", minute=6),
         # a bot: one page fetch, two machine-surface fetches
-        _visit("/backends", minute=10, **BOT),
+        _visit("/reference/configuration", minute=10, **BOT),
         _visit("/llms.txt", minute=11, **BOT),
-        _visit("/backends/page.json", minute=12, **BOT),
+        _visit("/reference/configuration/page.json", minute=12, **BOT),
     ])
     payload = daily_rollup("boilerplate", DAY,
                            visits=load_visits(ledger),
@@ -164,14 +164,14 @@ def test_mixed_day_totals_and_the_bot_split(tmp_path):
 
     rows = {r["path"]: r for r in payload["pages"]}
     # the human page rows carry no bot split — nothing to split
-    assert "bot_hits" not in rows["/examples/ai-integration"]
+    assert "bot_hits" not in rows["/reference/access"]
     # /backends: 2 human page views + 1 bot page view... but page visits by
     # bots are not in `pages` (humans only) — only machine-surface rows join
-    assert rows["/backends"]["hits"] == 1
+    assert rows["/reference/configuration"]["hits"] == 1
     # machine-surface rows carry the per-document demand split
     assert rows["/llms.txt"] == {"path": "/llms.txt", "hits": 1, "bot_hits": 1}
-    assert rows["/backends/llms.txt"]["hits"] == 1
-    assert "bot_hits" not in rows["/backends/llms.txt"]   # a human fetched it
+    assert rows["/reference/configuration/llms.txt"]["hits"] == 1
+    assert "bot_hits" not in rows["/reference/configuration/llms.txt"]   # a human fetched it
 
 
 def test_bot_visitors_is_distinct_not_summed(tmp_path):
@@ -179,7 +179,7 @@ def test_bot_visitors_is_distinct_not_summed(tmp_path):
     (IP, UA) hammering every surface is ONE visitor, however many hits."""
     ledger = _ledger(tmp_path, [
         _visit("/llms.txt", minute=m, **BOT) for m in range(1, 8)
-    ] + [_visit("/backends", minute=9, **BOT)])
+    ] + [_visit("/reference/configuration", minute=9, **BOT)])
     payload = daily_rollup("boilerplate", DAY,
                            visits=load_visits(ledger),
                            agent_visits=load_agent_hits(ledger))

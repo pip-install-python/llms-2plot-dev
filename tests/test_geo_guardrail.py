@@ -39,12 +39,12 @@ ALLOWED = "US"
 # not which of three corpus URLs was sampled.
 SURFACES = {
     "app page": "/",
-    "docs page": "/examples/ai-integration",
+    "docs page": "/reference/access",
     "asset": "/assets/main.css",
     "llms index": "/llms.txt",
     "llms small tier": "/llms-small.txt",
     "llms full tier": "/llms-full.txt",
-    "page llms.txt": "/examples/ai-integration/llms.txt",
+    "page llms.txt": "/reference/access/llms.txt",
     "robots.txt": "/robots.txt",
     "sitemap.xml": "/sitemap.xml",
     "favicon": "/favicon.ico",

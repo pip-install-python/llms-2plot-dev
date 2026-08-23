@@ -3,17 +3,13 @@ from dash_iconify import DashIconify
 
 from lib.constants import HEADER_HEIGHT
 
-# Paths the sidebar never renders. TWO groups, and the second is the one a
-# wave sync must not "clean up":
+# Paths the sidebar never renders.
 #
-#   1. the template's own placeholders (/404 and friends);
-#   2. THIS FORK'S HIDDEN INHERITANCE. The boilerplate's tutorial pages are
-#      kept on disk, registered, crawlable and reachable by URL — they are
-#      simply not advertised in this site's navigation, because this site
-#      documents a package rather than teaching the template. Deleting them
-#      would fork the file tree away from the template and make every future
-#      wave sync a merge conflict; hiding them costs one line each and keeps
-#      the sync a fast-forward. Do not delete the docs/ directories.
+# This fork DELETED the template's tutorial pages rather than hiding them
+# (owner decision, 2026-08-22): hiding kept them in sitemap.xml and
+# /llms.txt, so llms.2plot.dev was publishing dash-documentation-boilerplate's
+# documentation as its own — duplicate content competing with the site it
+# was forked from. What remains here is the template's own placeholder list.
 excluded_links = [
     "/404",
     "/styles-api",
@@ -21,29 +17,23 @@ excluded_links = [
     "/dash-iconify",
     "/migration",
     "/learning-resources",
-    # --- inherited boilerplate TUTORIAL pages (kept, not advertised) ---
-    # These teach the template: how to write a docs page, which directives
-    # exist, how the backends compare. Real material, wrong site.
-    "/getting-started",
-    "/examples/directives",
-    "/examples/interactive",
-    "/examples/visualization",
-    "/backends",
-    "/backend-comparison",
-    "/fastapi-showcase",
 ]
-# Deliberately NOT excluded, because they are about this site's own subject:
-#   /examples/ai-integration  — the package these docs document
-#   /networks, /network-standard — the federation this host is part of
-#   /authentication — the gate the control board sits behind
 
-# The two clusters this site leads with, in order, ahead of the inherited
-# documentation. Endpoints rather than names: a page's display name can be
-# edited in frontmatter without anyone thinking about the navbar.
+# This site's structure, in reading order. Endpoints rather than names, so a
+# page's display name can be edited in frontmatter without anyone remembering
+# to touch the navbar.
 PACKAGE_LINKS = [
     ("/audiences/mcp-clients", "MCP Clients", "tabler:plug-connected"),
     ("/audiences/web-crawlers", "Web Crawlers", "tabler:robot"),
     ("/audiences/llm-context", "Paste-to-Chat", "tabler:message-2-code"),
+]
+
+REFERENCE_LINKS = [
+    ("/getting-started", "Getting Started", "tabler:rocket"),
+    ("/reference/configuration", "Configuration", "tabler:settings-code"),
+    ("/reference/access", "Access & tiers", "tabler:lock-access"),
+    ("/reference/geo", "Geo guardrail", "tabler:world-cancel"),
+    ("/reference/panel", "Operator panel", "tabler:dashboard"),
 ]
 
 SHOWCASE_LINKS = [
@@ -52,9 +42,11 @@ SHOWCASE_LINKS = [
     ("/showcase/policy-panel", "C · Policy panel", "tabler:shield-lock"),
 ]
 
-# Rendered in their own clusters above, so the generic Documentation list
-# must not repeat them.
-_CLUSTERED = {path for path, _label, _icon in PACKAGE_LINKS + SHOWCASE_LINKS}
+# Every page reachable from a cluster above. Anything else that registers —
+# a page added without touching this file — still gets a link, under "More",
+# so a new doc is never silently unreachable.
+_CLUSTERED = {path for path, _label, _icon
+              in PACKAGE_LINKS + REFERENCE_LINKS + SHOWCASE_LINKS}
 
 
 def create_nav_link(icon, text, href, external=False):
@@ -95,44 +87,21 @@ def create_nav_section(title, links):
 def create_content(data):
     """Create navbar content with organized sections"""
 
-    # Define the desired order for documentation pages
-    page_order = [
-        "Getting Started",
-        "Pluggable Backends",
-        "Backend Deep Dive",
-        "FastAPI Showcase",
-        "Custom Directives",
-        "AI/LLM Integration",
-        "Multi-Site Networks",
-        "Network Standard",
-        "Authentication",
-        "Interactive .md",
-        "Data Visualization",
-    ]
-
     # Create a mapping of page names to their links
-    page_dict = {}
-    for entry in data:
-        if (entry["path"] not in excluded_links
-                and entry["path"] not in _CLUSTERED
-                and entry["path"] != "/"):
-            link = create_nav_link(
-                entry.get("icon", "fluent:document-24-regular"),
-                entry["name"],
-                entry["path"]
-            )
-            page_dict[entry["name"]] = link
-
-    # Order the links according to page_order
-    page_links = []
-    for page_name in page_order:
-        if page_name in page_dict:
-            page_links.append(page_dict[page_name])
-
-    # Add any remaining pages that aren't in the specified order
-    for name, link in page_dict.items():
-        if name not in page_order:
-            page_links.append(link)
+    # Anything registered but not in a cluster above. Normally empty — it is
+    # the safety net that keeps a newly added page from being unreachable.
+    page_links = [
+        create_nav_link(
+            entry.get("icon", "fluent:document-24-regular"),
+            entry["name"],
+            entry["path"],
+        )
+        for entry in sorted(data, key=lambda e: e.get("name") or e["path"])
+        if entry["path"] not in excluded_links
+        and entry["path"] not in _CLUSTERED
+        and entry["path"] != "/"
+        and not entry["path"].startswith("/admin/")
+    ]
 
     return dmc.ScrollArea(
         offsetScrollbars=True,
@@ -147,10 +116,8 @@ def create_content(data):
                     "/"
                 ),
 
-                # This site's own subject, first: the three audiences the
-                # package serves, then the three live showcases. Both sit
-                # ABOVE the inherited Documentation list, which is the
-                # template's material rather than this site's.
+                # This site's own structure: who the package serves, then
+                # how to configure it, then the live demonstrations.
                 dmc.Divider(mt="xs", mb="xs"),
                 create_nav_section(
                     "This package",
@@ -160,17 +127,21 @@ def create_content(data):
 
                 dmc.Divider(mt="md", mb="sm"),
                 create_nav_section(
+                    "Reference",
+                    [create_nav_link(icon, label, path)
+                     for path, label, icon in REFERENCE_LINKS],
+                ),
+
+                dmc.Divider(mt="md", mb="sm"),
+                create_nav_section(
                     "Showcase",
                     [create_nav_link(icon, label, path)
                      for path, label, icon in SHOWCASE_LINKS],
                 ),
 
-                # Documentation Pages Section
-                dmc.Divider(mt="md", mb="sm"),
-                create_nav_section(
-                    "Documentation",
-                    page_links
-                ),
+                # Empty in normal operation — see page_links above.
+                *([dmc.Divider(mt="md", mb="sm"),
+                   create_nav_section("More", page_links)] if page_links else []),
 
                 # Pip Components Section — sits between the docs and the
                 # general Resources list because it is not a third-party

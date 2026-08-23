@@ -4,6 +4,7 @@ from dash_iconify import DashIconify
 
 from components.backend_badge import create_backend_badge
 from lib.backend import get_backend_info
+from lib.constants import SITE_SHORT_NAME
 
 
 def create_clerk_avatar():
@@ -139,12 +140,16 @@ def create_header(data):
                             dmc.Group(
                                 [
                                     html.Img(
-                                        src=get_asset_url('ddb.png'),
+                                        src=get_asset_url('llms.png'),
                                         alt="",
                                         style={'height': '36px', 'width': '36px'}
                                     ),
                                     dmc.Text(
-                                        "Dash Docs",
+                                        # The brand, not a hardcoded string:
+                                        # the template shipped "Dash Docs"
+                                        # here, which every fork then served
+                                        # in its own header. One constant.
+                                        SITE_SHORT_NAME,
                                         size="lg",
                                         fw=700,
                                         c="#03c7e5",
@@ -156,7 +161,7 @@ def create_header(data):
                             ),
                             href="/",
                             underline=False,
-                            **{"aria-label": "Dash Docs — home"},
+                            **{"aria-label": f"{SITE_SHORT_NAME} — home"},
                         ),
                     ],
                     gap="md",
@@ -171,7 +176,7 @@ def create_header(data):
                         create_search(data),
                         create_link(
                             "radix-icons:github-logo",
-                            "https://github.com/pip-install-python/Dash-Documentation-Boilerplate",
+                            "https://github.com/pip-install-python/dash-improve-my-llms",
                             "View the source on GitHub",
                         ),
                         dmc.ActionIcon(

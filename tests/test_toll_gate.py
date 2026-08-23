@@ -230,8 +230,8 @@ def test_the_degrade_is_real_and_not_a_verdict_that_never_arrives(monkeypatch):
 
 
 def test_no_surface_answers_402_with_metering_off(client):
-    paths = ("/", "/examples/ai-integration", *CORPUS, *POLICY,
-             "/examples/ai-integration/llms.txt")
+    paths = ("/", "/reference/access", *CORPUS, *POLICY,
+             "/reference/access/llms.txt")
     for path in paths:
         for ua in (BROWSER_UA, CRAWLER_UA, BOT_UA):
             status = client.get(path, user_agent=ua).status

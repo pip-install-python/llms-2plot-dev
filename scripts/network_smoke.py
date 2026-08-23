@@ -176,8 +176,8 @@ def satellite_checks(base: str) -> None:
         expect(HUB_URL in text, f"the directory does not name {HUB_URL}")
 
     def page_llms_nav():
-        status, _, text = get("/backends/llms.txt")
-        expect(status == 200, f"/backends/llms.txt {status}")
+        status, _, text = get("/reference/configuration/llms.txt")
+        expect(status == 200, f"/reference/configuration/llms.txt {status}")
         expect("/llms.txt" in text, "llms_nav header missing — page doc is a dead end")
 
     def hidden_pages_404():
@@ -231,14 +231,14 @@ def satellite_checks(base: str) -> None:
 
     def agents_and_browsers_get_different_types():
         # One URL, two audiences, and a `Vary` that stops a CDN mixing them.
-        status, md_headers, md = get("/backends/llms.txt")
-        expect(status == 200, f"/backends/llms.txt {status}")
+        status, md_headers, md = get("/reference/configuration/llms.txt")
+        expect(status == 200, f"/reference/configuration/llms.txt {status}")
         expect(md_headers.get("content-type", "").startswith("text/markdown"),
                f"agents got {md_headers.get('content-type')!r}")
         expect("<!DOCTYPE html>" not in md, "viewer chrome reached an agent")
 
         _status, html_headers, html = get(
-            "/backends/llms.txt",
+            "/reference/configuration/llms.txt",
             headers={"Accept": "text/html,application/xhtml+xml,*/*;q=0.8"})
         expect("text/html" in html_headers.get("content-type", ""),
                f"browsers got {html_headers.get('content-type')!r}")

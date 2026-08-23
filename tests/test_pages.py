@@ -13,15 +13,19 @@ from conftest import CRAWLER_UA, STUB_MARKER, main_body
 # suite would pass with half the site missing.
 REQUIRED_PATHS = {
     "/",
+    # This site's own subject — the three audiences the package serves.
+    "/audiences/mcp-clients",
+    "/audiences/web-crawlers",
+    "/audiences/llm-context",
+    # The reference section.
     "/getting-started",
-    "/backends",
-    "/backend-comparison",
-    "/fastapi-showcase",
-    "/networks",
-    "/examples/ai-integration",
-    "/examples/directives",
-    "/examples/interactive",
-    "/examples/visualization",
+    "/reference/configuration",
+    "/reference/access",
+    "/reference/geo",
+    "/reference/panel",
+    # The live showcases.
+    "/showcase/robots-sandbox",
+    "/showcase/policy-panel",
 }
 
 
@@ -64,12 +68,16 @@ def test_prose_renders_as_html_not_literal_markdown(client):
     """2.1's renderer: links, code fences, rules and tables, not raw text.
 
     Before 2.1 these came through as `<p>---</p>`, literal `[text](url)` and
-    pipe characters. Checked on the directives page because it is the most
-    heavily formatted one in the repo.
+    pipe characters. Checked on the configuration page because it is the most
+    heavily formatted one in the repo — code fences, tables and rules.
     """
-    body = main_body(client.get("/examples/directives", user_agent=CRAWLER_UA).text)
+    body = main_body(client.get("/reference/configuration", user_agent=CRAWLER_UA).text)
 
-    assert body.count("<pre") >= 10, "expected code fences to render as <pre> blocks"
+    # 8, not 10: the threshold was tuned against the template's directives
+    # page, which this fork deleted. /reference/configuration is now the most
+    # heavily fenced page on the site (9), and the assertion's job is "several
+    # fences became <pre>", not a precise census.
+    assert body.count("<pre") >= 8, "expected code fences to render as <pre> blocks"
     assert "<hr" in body, "expected horizontal rules to render as <hr>"
     assert not re.search(r"<p>\s*-{3,}\s*</p>", body), "horizontal rule leaked as literal text"
     assert not re.search(r"\[[^\]]+\]\(https?://", body), "markdown link leaked as literal text"

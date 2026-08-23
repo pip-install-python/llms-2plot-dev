@@ -34,7 +34,7 @@ from lib.constants import INTERNAL_UA, INTERNAL_UA_TOKEN, internal_ua
 # A real page. `lib/traffic_rollup` drops infrastructure paths (`/llms.txt`,
 # `/robots.txt`, `/healthz`, ...) at read time, so a rollup assertion made
 # against one of those would pass no matter what the tracker did.
-PAGE = "/backends"
+PAGE = "/reference/configuration"
 
 
 def _ledger_visits():
@@ -213,7 +213,7 @@ def test_the_ad_fetch_sends_the_token(monkeypatch):
 
     seen = _capture_headers(monkeypatch, ad_client._session, "get")
     monkeypatch.setattr(ad_client, "_last_failure", 0.0)
-    assert ad_client.fetch_ad("/backends") is None
+    assert ad_client.fetch_ad("/reference/configuration") is None
     assert INTERNAL_UA_TOKEN in seen.get("User-Agent", "")
 
 

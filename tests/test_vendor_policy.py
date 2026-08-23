@@ -33,9 +33,9 @@ GPTBOT_UA = "GPTBot/1.1"
 SEARCH_UA = "PerplexityBot/1.0"
 CLAUDE_USER_UA = "Claude-User/1.0"
 
-PAGE_SURFACES = ("/", "/examples/ai-integration")
+PAGE_SURFACES = ("/", "/reference/access")
 DOC_SURFACES = ("/llms.txt", "/llms-small.txt", "/llms-full.txt",
-                "/examples/ai-integration/llms.txt")
+                "/reference/access/llms.txt")
 POLICY_SURFACES = ("/robots.txt", "/sitemap.xml")
 
 

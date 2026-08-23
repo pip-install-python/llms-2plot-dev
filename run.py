@@ -505,8 +505,24 @@ configure_seo(
 # ============================================================================
 
 RETIRED_URLS = {
-    # networks.py folded into Showcase C's live network section
-    "/networks-old": "/showcase/policy-panel",
+    # networks.py folded into Showcase C's live network section. This is a
+    # REAL old-service URL, not a placeholder: the B1 page table retires
+    # networks.py, and the boilerplate this site forked from also served
+    # /networks — so the path has inbound links from two directions.
+    "/networks": "/showcase/policy-panel",
+    # The template's own pages, deleted rather than hidden when this site
+    # stopped publishing dash-documentation-boilerplate's documentation as
+    # its own. They were never on llms.2plot.dev publicly, but the fork's
+    # history contains them and a stray link costs nothing to honour.
+    "/network-standard": "/showcase/policy-panel",
+    "/backends": "/reference/configuration",
+    "/backend-comparison": "/reference/configuration",
+    "/fastapi-showcase": "/reference/configuration",
+    "/authentication": "/reference/access",
+    "/examples/ai-integration": "/getting-started",
+    "/examples/directives": "/getting-started",
+    "/examples/interactive": "/getting-started",
+    "/examples/visualization": "/getting-started",
     # analytics.py + admin.py retire with the old service. The hub's /traffic
     # board replaced the first; the control board replaced the second, and
     # ADMIN_DASH_TOKEN dies with them (the archived KICKOFF-llms.md addendum

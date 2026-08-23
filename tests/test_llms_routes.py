@@ -277,3 +277,76 @@ def test_nav_block_is_absent_from_the_root_index(client):
     body = client.get("/llms.txt").text
     assert "## Pages" in body, "the root document should be an index"
     assert not CHROME.search(body), "viewer chrome leaked into the root index"
+
+
+# ---------------------------------------------------------------------------
+# /healthz is a LIVE report, not a snapshot
+# ---------------------------------------------------------------------------
+
+def test_healthz_reports_which_app_answered(client):
+    """`build` says which commit; `app` says which satellite.
+
+    On a fleet where several hosts share a template and a hostname can be
+    repointed between services, those are different questions.
+    """
+    import json
+
+    payload = json.loads(client.get("/healthz").text)
+    assert payload["app"], "no app identity on /healthz"
+    assert payload["ok"] is True
+
+
+def test_healthz_reports_the_live_geo_state(app_module, client):
+    """The regression pin for a snapshot payload.
+
+    `register_health_route` used to compute the payload ONCE at registration
+    and close over it. Harmless while every field was static — and silently
+    wrong the moment one is not. The route is registered ~150 lines before
+    `configure_geo` runs, so a snapshot reported the guardrail unconfigured
+    on a host where it is configured: the diagnostic lying in exactly the
+    situation it exists for.
+    """
+    import json
+
+    from lib import policy_store
+
+    before = json.loads(client.get("/healthz").text)["geo"]
+    assert before["configured"] is True, (
+        "this app calls configure_geo unconditionally, so /healthz must "
+        "report it configured"
+    )
+
+    try:
+        app_module.configure_geo(deny_countries=["RU", "CN"])
+        after = json.loads(client.get("/healthz").text)["geo"]
+        assert after["denied"] == 2, (
+            f"/healthz did not follow a live config change ({after}) — it is "
+            "a snapshot again"
+        )
+    finally:
+        app_module.configure_geo(
+            deny_countries=policy_store.geo_deny,
+            unknown=policy_store.geo_unknown(),
+            exempt_paths=("/healthz", "/health", "/livez", "/readyz"),
+        )
+
+
+def test_healthz_never_publishes_the_country_codes(app_module, client):
+    """Counts and flags only. The codes are already public on the policy
+    showcase, but a health endpoint is not where anyone should learn policy.
+    """
+    import json
+
+    from lib import policy_store
+
+    try:
+        app_module.configure_geo(deny_countries=["RU", "CN"])
+        body = client.get("/healthz").text
+        assert "RU" not in body and "CN" not in body, body
+        assert json.loads(body)["geo"]["denied"] == 2
+    finally:
+        app_module.configure_geo(
+            deny_countries=policy_store.geo_deny,
+            unknown=policy_store.geo_unknown(),
+            exempt_paths=("/healthz", "/health", "/livez", "/readyz"),
+        )

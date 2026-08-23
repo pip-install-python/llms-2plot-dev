@@ -50,9 +50,23 @@ class PageListResponse(BaseModel):
 
 
 class HealthResponse(BaseModel):
+    """The probe contract, identical on every backend.
+
+    `lib.health.health_payload` is the single source — this model only types
+    it for Swagger. It used to be built independently here, which meant a
+    FastAPI deployment silently lacked `build`: CD's build-match wait polls
+    /healthz for exactly that field, so it would have fallen into the
+    "predates the build field" warning path forever, verifying whichever
+    release happened to be serving.
+    """
+
     ok: bool = True
     backend: str
     dash_version: str
+    # Optional because they are environment-dependent, not backend-dependent.
+    build: Optional[str] = None
+    app: Optional[str] = None
+    geo: Optional[dict] = None
 
 
 # ---------------------------------------------------------------------------
@@ -102,11 +116,12 @@ def build_health_router() -> APIRouter:
 
     @router.get("/healthz", response_model=HealthResponse, summary="Liveness probe")
     def healthz() -> HealthResponse:
-        return HealthResponse(
-            ok=True,
-            backend="fastapi",
-            dash_version=dash.__version__,
-        )
+        # One payload builder for all three backends — see HealthResponse.
+        # Built per request: `geo` reports live state, and this route is
+        # mounted long before configure_geo runs.
+        from lib.health import health_payload
+
+        return HealthResponse(**health_payload("fastapi"))
 
     return router
 

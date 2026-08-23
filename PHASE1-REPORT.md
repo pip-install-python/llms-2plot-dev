@@ -116,6 +116,72 @@ source: `test_smoke_live`'s foreign-canonical check spelled
 `boilerplate.2plot.dev` literally, so on any fork it rewrote nothing and
 passed as a no-op. It reads `BASE_URL` from constants now.
 
+### B1a — the identity rebuild (owner-directed, 2026-08-22)
+
+B1 changed the identity *strings*; a review found the site was still the
+template underneath. Three problems, in increasing order of consequence:
+
+- the header served `ddb.png` beside the literal wordmark **"Dash Docs"** and
+  linked to the boilerplate's GitHub repo — the most visible surface on the
+  site;
+- the home page's hero was `intro_img.jpg`, the boilerplate's own screenshot;
+- **eleven doc pages were byte-identical to the boilerplate's**, and
+  `excluded_links` hid them only from the sidebar. They remained in
+  `sitemap.xml`, `/llms.txt`, `/llms-full.txt`, the MCP resource set and the
+  prerender — so llms.2plot.dev would have published
+  dash-documentation-boilerplate's tutorials as its own documentation, on
+  eleven URLs, competing with the site it was forked from.
+
+**Owner decision: delete them, not hide them.** This overrides the migration
+kickoff's `NEVER deleted (wave-sync purity)` rule, which is recorded here
+because it has a running cost: template wave syncs touching `docs/` now
+require manual resolution rather than fast-forwarding. That cost was accepted
+in exchange for a site that stands on its own.
+
+Deleted: `ai-integration`, `authentication`, `backend-comparison`, `backends`,
+`data-visualization`, `directives`, `example`, `fastapi-showcase`,
+`interactive-components`, `network-standard`, `networks`. `lib/directives/` —
+the directive *implementations* — stays; only the pages teaching them went.
+
+Rebranded: header logo → the hook mark, wordmark → `SITE_SHORT_NAME` (the
+template hardcoded a string every fork then served), GitHub link →
+`dash-improve-my-llms`, home hero → a rendered `assets/hero.png`, JSON-LD
+organisation logo, and the social-card script's default artwork. Deleted
+`ddb.png`, `dash_documentation_boilerplate.png`, `intro_img.*` and
+`logo.svg`. README rewritten from 849 lines of the template's manual to this
+repo's own. CHANGELOG gains this fork's 1.0.0 entry above the inherited
+history.
+
+**Verified:** no served surface — `/`, the reference pages, `/llms.txt`,
+`/llms-full.txt`, `/robots.txt`, `/sitemap.xml`, or the crawler document —
+carries "boilerplate", "Dash Docs", `ddb.png` or `intro_img`. The two
+remaining mentions of `boilerplate.2plot.dev` are correct: it is a peer in
+the cross-host network directory. `sitemap.xml` and `/llms.txt` list 11
+pages, all this site's own.
+
+### B2a — the Reference section (the gap the deletion exposed)
+
+The site documented a package and had **no reference documentation for it** —
+nothing on installing, `LLMSConfig`, `RobotsConfig`, `configure_seo`, access,
+geo or the panel. Five pages now:
+
+| Page | Covers |
+|---|---|
+| `/getting-started` | install, the one-line integration, where prose comes from, the checks to run |
+| `/reference/configuration` | every `LLMSConfig` / `RobotsConfig` / `configure_seo` option |
+| `/reference/access` | the four verdicts, the two axes, the 402 seam, the rate contract |
+| `/reference/geo` | `configure_geo`, the trust model, and `lib/policy_store.py` inlined via `.. source::` |
+| `/reference/panel` | the token gate, what it shows, and why it never writes |
+
+Written against the installed 2.7.0 signatures rather than from memory, and
+stating the consequences that are not obvious from a parameter name:
+`block_ai_training=False` silently *allows* training rather than balancing it;
+`rate_limit_per_minute` is per worker; `vendor_policy` keys are registry keys,
+so a typo is a policy that does nothing.
+
+Sixteen `301` redirects now — the deleted template paths point at their
+nearest replacement rather than 404ing.
+
 ### B2 — pages, showcases, redirects (complete)
 
 Three audience pages at their **byte-for-byte preserved** URLs:
@@ -178,7 +244,7 @@ worker is not erased by an older one's toggle.
 
 | Suite | Tests |
 |---|---|
-| Inherited (unchanged behaviour) | 322 |
+| Inherited (retargeted at this site's pages) | ~300 |
 | `test_geo_guardrail.py` | 77 + 4 xfail |
 | `test_showcase.py` | 60 |
 | `test_vendor_policy.py` | 29 + 4 xfail |
@@ -186,12 +252,21 @@ worker is not erased by an older one's toggle.
 | `test_operator_panel.py` | 22 + 1 skip |
 | `test_control_board_geo.py` | 21 |
 | `test_prerender_idempotency.py` | 9 |
-| **Total** | **587 passed / 1 skipped / 8 xfailed** (Flask) · **584 / 4 / 8** (FastAPI) |
+| **Total** | **563 passed / 1 skipped / 8 xfailed** (Flask) · **560 / 4 / 8** (FastAPI) |
 
-`scripts/audit_links.py`: 156 links audited, 3 flagged and all expected — the
-hidden control board's own `llms.txt` 404 (which `network_smoke`'s
-`HIDDEN_DOC_PATHS` asserts *should* 404) and one inherited network peer that
-was unreachable from this sandbox.
+The total fell from 587 after the template's docs were deleted — several
+inherited suites are parametrized per markdown file. The suites that keyed on
+specific template pages were **remapped individually**, not sed'd:
+`/reference/configuration` for the heavily-formatted page,
+`/reference/geo` for the `.. source::` expansion test, `/reference/panel` for
+content negotiation. The `dv-banner` test survives because
+`/reference/configuration` now documents the viewer's class names — and it
+immediately caught that page writing the literal opening tag, which is the
+exact confusion the test exists to prevent.
+
+`scripts/audit_links.py`: **0 broken internal links** (was 3). The two
+remaining flags are one inherited network peer unreachable from this
+sandbox.
 
 Two harness changes worth knowing about, both additive and both candidates
 for upstreaming: `tests/conftest.py`'s client grew `headers=` and `post()` —

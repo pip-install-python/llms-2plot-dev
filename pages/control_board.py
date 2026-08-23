@@ -350,19 +350,48 @@ def save_visibility_change(_vis_values, _llms_values):
 # headers and the package both speak alpha-2, and the store holds alpha-2 —
 # so exactly one translation table exists, here, at the display edge.
 _ALPHA2_TO_ALPHA3 = {
-    "AF": "AFG", "AL": "ALB", "AR": "ARG", "AT": "AUT", "AU": "AUS", "BD": "BGD",
-    "BE": "BEL", "BG": "BGR", "BR": "BRA", "BY": "BLR", "CA": "CAN", "CH": "CHE",
-    "CL": "CHL", "CN": "CHN", "CO": "COL", "CU": "CUB", "CZ": "CZE", "DE": "DEU",
-    "DK": "DNK", "EE": "EST", "EG": "EGY", "ES": "ESP", "FI": "FIN", "FR": "FRA",
-    "GB": "GBR", "GR": "GRC", "HK": "HKG", "HR": "HRV", "HU": "HUN", "ID": "IDN",
-    "IE": "IRL", "IL": "ISR", "IN": "IND", "IQ": "IRQ", "IR": "IRN", "IS": "ISL",
-    "IT": "ITA", "JP": "JPN", "KE": "KEN", "KP": "PRK", "KR": "KOR", "KZ": "KAZ",
-    "LT": "LTU", "LV": "LVA", "MA": "MAR", "MX": "MEX", "MY": "MYS", "NG": "NGA",
-    "NL": "NLD", "NO": "NOR", "NZ": "NZL", "PE": "PER", "PH": "PHL", "PK": "PAK",
-    "PL": "POL", "PT": "PRT", "RO": "ROU", "RS": "SRB", "RU": "RUS", "SA": "SAU",
-    "SD": "SDN", "SE": "SWE", "SG": "SGP", "SK": "SVK", "SY": "SYR", "TH": "THA",
-    "TR": "TUR", "TW": "TWN", "UA": "UKR", "US": "USA", "VE": "VEN", "VN": "VNM",
-    "ZA": "ZAF",
+    "AD": "AND", "AE": "ARE", "AF": "AFG", "AG": "ATG", "AI": "AIA", "AL": "ALB",
+    "AM": "ARM", "AO": "AGO", "AQ": "ATA", "AR": "ARG", "AS": "ASM", "AT": "AUT",
+    "AU": "AUS", "AW": "ABW", "AX": "ALA", "AZ": "AZE", "BA": "BIH", "BB": "BRB",
+    "BD": "BGD", "BE": "BEL", "BF": "BFA", "BG": "BGR", "BH": "BHR", "BI": "BDI",
+    "BJ": "BEN", "BL": "BLM", "BM": "BMU", "BN": "BRN", "BO": "BOL", "BQ": "BES",
+    "BR": "BRA", "BS": "BHS", "BT": "BTN", "BV": "BVT", "BW": "BWA", "BY": "BLR",
+    "BZ": "BLZ", "CA": "CAN", "CC": "CCK", "CD": "COD", "CF": "CAF", "CG": "COG",
+    "CH": "CHE", "CI": "CIV", "CK": "COK", "CL": "CHL", "CM": "CMR", "CN": "CHN",
+    "CO": "COL", "CR": "CRI", "CU": "CUB", "CV": "CPV", "CW": "CUW", "CX": "CXR",
+    "CY": "CYP", "CZ": "CZE", "DE": "DEU", "DJ": "DJI", "DK": "DNK", "DM": "DMA",
+    "DO": "DOM", "DZ": "DZA", "EC": "ECU", "EE": "EST", "EG": "EGY", "EH": "ESH",
+    "ER": "ERI", "ES": "ESP", "ET": "ETH", "FI": "FIN", "FJ": "FJI", "FK": "FLK",
+    "FM": "FSM", "FO": "FRO", "FR": "FRA", "GA": "GAB", "GB": "GBR", "GD": "GRD",
+    "GE": "GEO", "GF": "GUF", "GG": "GGY", "GH": "GHA", "GI": "GIB", "GL": "GRL",
+    "GM": "GMB", "GN": "GIN", "GP": "GLP", "GQ": "GNQ", "GR": "GRC", "GS": "SGS",
+    "GT": "GTM", "GU": "GUM", "GW": "GNB", "GY": "GUY", "HK": "HKG", "HM": "HMD",
+    "HN": "HND", "HR": "HRV", "HT": "HTI", "HU": "HUN", "ID": "IDN", "IE": "IRL",
+    "IL": "ISR", "IM": "IMN", "IN": "IND", "IO": "IOT", "IQ": "IRQ", "IR": "IRN",
+    "IS": "ISL", "IT": "ITA", "JE": "JEY", "JM": "JAM", "JO": "JOR", "JP": "JPN",
+    "KE": "KEN", "KG": "KGZ", "KH": "KHM", "KI": "KIR", "KM": "COM", "KN": "KNA",
+    "KP": "PRK", "KR": "KOR", "KW": "KWT", "KY": "CYM", "KZ": "KAZ", "LA": "LAO",
+    "LB": "LBN", "LC": "LCA", "LI": "LIE", "LK": "LKA", "LR": "LBR", "LS": "LSO",
+    "LT": "LTU", "LU": "LUX", "LV": "LVA", "LY": "LBY", "MA": "MAR", "MC": "MCO",
+    "MD": "MDA", "ME": "MNE", "MF": "MAF", "MG": "MDG", "MH": "MHL", "MK": "MKD",
+    "ML": "MLI", "MM": "MMR", "MN": "MNG", "MO": "MAC", "MP": "MNP", "MQ": "MTQ",
+    "MR": "MRT", "MS": "MSR", "MT": "MLT", "MU": "MUS", "MV": "MDV", "MW": "MWI",
+    "MX": "MEX", "MY": "MYS", "MZ": "MOZ", "NA": "NAM", "NC": "NCL", "NE": "NER",
+    "NF": "NFK", "NG": "NGA", "NI": "NIC", "NL": "NLD", "NO": "NOR", "NP": "NPL",
+    "NR": "NRU", "NU": "NIU", "NZ": "NZL", "OM": "OMN", "PA": "PAN", "PE": "PER",
+    "PF": "PYF", "PG": "PNG", "PH": "PHL", "PK": "PAK", "PL": "POL", "PM": "SPM",
+    "PN": "PCN", "PR": "PRI", "PS": "PSE", "PT": "PRT", "PW": "PLW", "PY": "PRY",
+    "QA": "QAT", "RE": "REU", "RO": "ROU", "RS": "SRB", "RU": "RUS", "RW": "RWA",
+    "SA": "SAU", "SB": "SLB", "SC": "SYC", "SD": "SDN", "SE": "SWE", "SG": "SGP",
+    "SH": "SHN", "SI": "SVN", "SJ": "SJM", "SK": "SVK", "SL": "SLE", "SM": "SMR",
+    "SN": "SEN", "SO": "SOM", "SR": "SUR", "SS": "SSD", "ST": "STP", "SV": "SLV",
+    "SX": "SXM", "SY": "SYR", "SZ": "SWZ", "TC": "TCA", "TD": "TCD", "TF": "ATF",
+    "TG": "TGO", "TH": "THA", "TJ": "TJK", "TK": "TKL", "TL": "TLS", "TM": "TKM",
+    "TN": "TUN", "TO": "TON", "TR": "TUR", "TT": "TTO", "TV": "TUV", "TW": "TWN",
+    "TZ": "TZA", "UA": "UKR", "UG": "UGA", "UM": "UMI", "US": "USA", "UY": "URY",
+    "UZ": "UZB", "VA": "VAT", "VC": "VCT", "VE": "VEN", "VG": "VGB", "VI": "VIR",
+    "VN": "VNM", "VU": "VUT", "WF": "WLF", "WS": "WSM", "YE": "YEM", "YT": "MYT",
+    "ZA": "ZAF", "ZM": "ZMB", "ZW": "ZWE",
 }
 _ALPHA3_TO_ALPHA2 = {v: k for k, v in _ALPHA2_TO_ALPHA3.items()}
 
@@ -370,22 +399,40 @@ _ALPHA3_TO_ALPHA2 = {v: k for k, v in _ALPHA2_TO_ALPHA3.items()}
 def _geo_figure(denied):
     """The denylist as a choropleth figure.
 
+    EVERY country is in `locations`, denied or not — allowed ones carry z=0
+    and the colorscale paints 0 fully transparent, so the map looks identical
+    to plotting only the denied set. This is not cosmetic: Plotly emits
+    `clickData` **only for locations present in the trace**, so plotting just
+    the denied countries made the map clickable only where a block already
+    existed. You could un-deny by clicking and never deny — which is the one
+    thing the map is for. Found by opening the board rather than by a test,
+    which is why test_the_map_is_clickable_for_a_country_that_is_not_denied
+    now exists.
+
     Separate from the Graph wrapper because the toggle callback returns a
     FIGURE, not a component — patching `figure` in place is what keeps the
     map's zoom and the click handler alive across an update.
     """
-    codes = [_ALPHA2_TO_ALPHA3[c] for c in denied if c in _ALPHA2_TO_ALPHA3]
+    denied_set = {c for c in denied if c in _ALPHA2_TO_ALPHA3}
+    locations = [_ALPHA2_TO_ALPHA3[c] for c in sorted(_ALPHA2_TO_ALPHA3)]
+    z = [1 if c in denied_set else 0 for c in sorted(_ALPHA2_TO_ALPHA3)]
     figure = {
         "data": [
             {
                 "type": "choropleth",
                 "locationmode": "ISO-3",
-                "locations": codes or ["ATA"],
-                "z": [1] * len(codes) if codes else [0],
+                "locations": locations,
+                "z": z,
+                # Pinned range: with an all-zero z Plotly would autoscale and
+                # paint every country at the TOP of the scale — a world map
+                # entirely red the moment the denylist is empty.
+                "zmin": 0,
+                "zmax": 1,
                 "colorscale": [[0, "rgba(0,0,0,0)"], [1, "#e03131"]],
                 "showscale": False,
                 "marker": {"line": {"color": "rgba(128,128,128,0.35)", "width": 0.4}},
-                "hovertemplate": "%{location} — denied<extra></extra>",
+                "customdata": [("denied" if v else "allowed") for v in z],
+                "hovertemplate": "%{location} — %{customdata}<extra></extra>",
             }
         ],
         "layout": {

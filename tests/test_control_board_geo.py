@@ -219,16 +219,62 @@ def test_the_choropleth_reflects_the_store(clean_policy_store, monkeypatch):
     monkeypatch.setenv("ALLOW_UNGATED_ADMIN", "1")
 
     empty = board._geo_figure([])
-    assert empty["data"][0]["locations"] == ["ATA"], (
-        "an empty denylist should paint nothing"
-    )
+    assert sum(empty["data"][0]["z"]) == 0, "an empty denylist should paint nothing"
 
     board._toggle_country(1, "DE")
     figure = board._geo_figure(clean_policy_store.geo_deny())
-    assert "DEU" in figure["data"][0]["locations"], (
-        "the map does not show a denied country — alpha-2 to alpha-3 "
-        "translation is the one place these two vocabularies meet"
+    data = figure["data"][0]
+    painted = {loc for loc, z in zip(data["locations"], data["z"]) if z}
+    assert painted == {"DEU"}, (
+        "the map does not paint exactly the denied set — alpha-2 to alpha-3 "
+        f"translation is the one place these two vocabularies meet: {painted}"
     )
+
+
+def test_the_map_is_clickable_for_a_country_that_is_not_denied(monkeypatch):
+    """The bug a browser found and no test had: Plotly emits `clickData` ONLY
+    for locations present in the trace. Plotting just the denied countries
+    made the map clickable exactly where a block already existed — you could
+    un-deny by clicking and never deny, which is the map's entire purpose.
+    """
+    board = _board()
+    figure = board._geo_figure(["RU"])
+    locations = figure["data"][0]["locations"]
+
+    for code in ("BRA", "USA", "DEU", "JPN", "ZAF", "AUS"):
+        assert code in locations, (
+            f"{code} is absent from the trace, so clicking it emits no "
+            "clickData and the country cannot be denied from the map"
+        )
+    assert len(locations) == len(board._ALPHA2_TO_ALPHA3), (
+        "every country in the translation table must be plotted, or part of "
+        "the world is silently unclickable"
+    )
+
+
+def test_an_empty_denylist_does_not_paint_the_world_red(monkeypatch):
+    """`zmin`/`zmax` are pinned for a reason: with an all-zero z, Plotly
+    autoscales and paints every country at the TOP of the colorscale."""
+    figure = _board()._geo_figure([])
+    data = figure["data"][0]
+    assert data["zmin"] == 0 and data["zmax"] == 1
+
+
+def test_the_alpha3_lookup_round_trips(monkeypatch):
+    board = _board()
+    for alpha2, alpha3 in board._ALPHA2_TO_ALPHA3.items():
+        assert board._ALPHA3_TO_ALPHA2[alpha3] == alpha2
+    assert len(board._ALPHA3_TO_ALPHA2) == len(board._ALPHA2_TO_ALPHA3), (
+        "two alpha-2 codes map to one alpha-3 — a map click would resolve to "
+        "the wrong country"
+    )
+
+
+def test_the_table_covers_the_countries_an_operator_would_reach_for(monkeypatch):
+    board = _board()
+    for code in ("US", "GB", "DE", "FR", "CN", "RU", "IR", "KP", "SY", "CU",
+                 "BR", "IN", "JP", "AU", "ZA", "NG", "MX", "CA"):
+        assert code in board._ALPHA2_TO_ALPHA3, f"{code} is not translatable"
 
 
 def test_a_map_click_selects_but_does_not_commit(clean_policy_store, monkeypatch):

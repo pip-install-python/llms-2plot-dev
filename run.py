@@ -841,4 +841,17 @@ start_reporter()
 
 
 if __name__ == "__main__":
-    app.run(debug=False, host='0.0.0.0', port='8959')
+    # Env-overridable, same defaults as before. Two reasons beyond taste:
+    # a platform that injects $PORT (Render does) can be honoured without a
+    # code change, and a developer can bind to loopback only — 0.0.0.0
+    # publishes the dev server to every device on the network, which is a
+    # surprise on a shared wifi and is refused outright inside a sandbox.
+    #
+    # port= was a STRING here. Werkzeug coerces it, so it worked; int() makes
+    # a bad value fail at boot with a clear error instead of deep in the
+    # server.
+    app.run(
+        debug=os.environ.get("DASH_DEBUG") == "1",
+        host=os.environ.get("HOST", "0.0.0.0"),
+        port=int(os.environ.get("PORT", "8959")),
+    )

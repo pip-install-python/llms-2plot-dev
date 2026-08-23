@@ -141,6 +141,16 @@ dmypy.json
 visitor_analytics.json
 visitor_analytics.json.lock
 visitor_analytics.json.tmp
+
+# The two control-board stores. Same reason as the analytics ledger above:
+# with POLICY_STORE_FILE / PAGE_VISIBILITY_FILE unset they fall back to the
+# app directory, so a local run of the board writes a real policy file into
+# the checkout. In production both point at the mounted disk and boot warns
+# loudly when they do not.
+policy_overrides.json
+policy_overrides.json.lock
+policy_overrides.json.tmp
+page_visibility.json
 # Reporter lease — which worker POSTed the last hourly rollup to 2plot.ai.
 .satellite_report.lease
 

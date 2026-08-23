@@ -483,3 +483,45 @@ dash-documentation-boilerplate `ab22fd7` (a commit this fork's first push
 prompted). Security updates are unaffected — separate channel. PRs #1 (base
 image 3.11.8 → 3.14.7) and #2 (actions group) are different ecosystems, are
 real decisions, and stay open.
+
+---
+
+## 11. Template sync — fence-aware source expansion (2026-08-23)
+
+Ported from `dash-documentation-boilerplate` 1.6.11 (`30075d0`): the
+fence-aware `_expand_source_directives` in `pages/markdown.py`, the
+every-page single-h1 / deduped-footer pin, and the fence unit test.
+
+**The upstream bug.** `_expand_source_directives` was a plain regex `sub`
+over the whole document, so a `.. source::` written *inside* a fenced block
+to TEACH the directive was expanded like a real one. The expansion injects
+its own ```` ```python ```` fence, which closes the already-open fence early
+— everything after it renders as markdown, and every `# comment` line in the
+inlined file becomes an `<h1>`. Five h1s on the template's tutorial page,
+machine lane only: markdown2dash parses fences properly, so the browser lane
+was always correct and nothing looked wrong to a human. The expander is now
+a line walker that tracks the open fence marker (``` and ~~~ both) and
+expands only at fence depth zero.
+
+**Prevention here, not a fix.** This fork has exactly one `.. source::` —
+`docs/reference_geo/geo.md:117`, inlining `lib/policy_store.py`, at top
+level. No page here teaches the directive inside a fence today. The port is
+for the day one does; the pin is what would catch it.
+
+**The sweep found no drift.** It ran over all 11 non-admin pages — every one
+serves exactly one `<h1>` to a generic client and a footer whose llms.txt
+links are distinct, with `/` carrying the root link once. The same sweep
+caught real content drift on two other forks (leaflet, muicharts), so the
+clean result here is a measurement, not an assumption.
+
+One adaptation: the template's pin skips `/admin/*` inline. This repo's
+`pages` fixture already drops it — the control board fails closed to
+anonymous renders and `tests/test_control_board.py` owns its assertions — so
+the guard would be dead code, and the docstring says where the exclusion
+actually lives.
+
+Also refreshed the prerender-lane test's floor wording: it still named 2.6.1
+as "the floor", which has been >=2.7.1 since Phase B.
+
+**602 passed / 1 skipped (flask), 599 passed / 4 skipped (fastapi)**,
+flake8 clean.

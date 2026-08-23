@@ -275,7 +275,16 @@ aside.mantine-AppShell-aside {
     --mantine-color-dark-outline-hover: rgba(113, 113, 122, 0.05);
 }
 
-img[alt=logo] { width: 100%; }
+/* Content images are responsive by DEFAULT.
+   This replaces `img[alt=logo] { width: 100% }`, which keyed layout on ALT
+   TEXT: the template's home page happened to call its hero "logo", so
+   renaming the alt — a pure copy edit — dropped the constraint and let a
+   1200px image overflow every phone. Nothing about an image's caption
+   should decide whether it fits the screen. */
+[id^="m2d-page"] img {
+    max-width: 100%;
+    height: auto;
+}
 
 /* Theme-aware code blocks */
 :root[data-mantine-color-scheme="light"] pre,

@@ -1,7 +1,5 @@
 # Dash Improve My LLMs — the AI and crawler surface for Dash apps
 
-![dash-improve-my-llms](/assets/hero.png)
-
 > **`dash-improve-my-llms` — the crawler, agent and SEO companion every Dash app mounts in one line.** By [Pip Install Python](https://2plot.dev).
 
 A Dash app is a JavaScript shell. A crawler that fetches it gets an empty

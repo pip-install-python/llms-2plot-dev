@@ -305,3 +305,69 @@ def test_the_index_template_is_still_wired_in(app_module):
                         "{%config%}", "{%scripts%}", "{%renderer%}"):
         assert placeholder in index, f"{placeholder} missing from the template"
     assert app_module.app.index_string.startswith("<!DOCTYPE html>")
+
+
+# ---------------------------------------------------------------------------
+# The home hero IS the social card
+# ---------------------------------------------------------------------------
+# One CDN object, four consumers: the og:image, the twitter card, the JSON-LD,
+# and now the home page's own hero. Pointing them all at OG_IMAGE_URL is what
+# stops the page and its share preview showing different artwork.
+
+
+def test_the_home_hero_is_the_social_card_object():
+    """The hero renders from the same constant, not a second copy."""
+    import runpy
+    import dash
+
+    from lib.constants import OG_IMAGE_URL
+
+    source = (REPO_ROOT / "pages" / "home.py").read_text()
+    assert "src=OG_IMAGE_URL" in source, (
+        "the home hero does not render from OG_IMAGE_URL — the page and its "
+        "share card can now drift to different artwork"
+    )
+    assert OG_IMAGE_URL.startswith("https://"), OG_IMAGE_URL
+
+
+def test_the_home_hero_is_a_component_not_a_markdown_image():
+    """`dcc.Markdown` renders `![alt](src)` as a bare <img> with no
+    constraint, which is how a 1200px card came to overflow every phone.
+
+    The component carries its own responsive root styles and cannot be
+    detached from them by renaming the alt text.
+    """
+    source = (REPO_ROOT / "pages" / "home.py").read_text()
+    assert "dmc.Image(" in source, "the hero is not a dmc.Image"
+    assert 'fit="contain"' in source, (
+        "the hero uses the default object-fit: cover, which crops the "
+        "wordmark out of the card at some viewport widths"
+    )
+    assert "fallbackSrc=" in source, (
+        "no fallbackSrc — the hero vanishes when the CDN is unreachable"
+    )
+
+    prose = (REPO_ROOT / "pages" / "home.md").read_text()
+    assert "/assets/hero.png" not in prose, (
+        "the decorative hero is back in home.md, which IS this site's "
+        "/llms.txt prose — presentation belongs in the layout"
+    )
+
+
+def test_the_hero_reserves_its_box_before_loading():
+    """A ratio rather than a fixed height: correct at every width, and no
+    layout jump while the CDN responds."""
+    source = (REPO_ROOT / "pages" / "home.py").read_text()
+    assert "aspectRatio" in source, (
+        "the hero reserves no box, so the page reflows when the image lands"
+    )
+
+
+def test_content_images_are_constrained_by_stylesheet():
+    """The backstop for every OTHER markdown image on the site."""
+    css = (REPO_ROOT / "assets" / "main.css").read_text()
+    assert '[id^="m2d-page"] img' in css, (
+        "no responsive rule for content images — the next markdown image "
+        "someone adds will overflow small screens exactly as the hero did"
+    )
+    assert "max-width: 100%" in css

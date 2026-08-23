@@ -46,3 +46,33 @@ def test_no_mantine_hashed_selectors_in_assets():
         "mantine-<Component>-<part> classes or the Styles API instead: "
         f"{offenders}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Rules keyed on CONTENT rather than structure
+# ---------------------------------------------------------------------------
+# Same family as the hashed-class rules above: a selector coupled to
+# something that is not structural, which therefore stops matching for a
+# reason nobody connects to layout.
+#
+# This template shipped `img[alt=logo] { width: 100% }`, and the home page's
+# hero happened to be captioned "logo". Renaming that alt during this fork's
+# identity rebuild — a pure copy edit, reviewed as prose — dropped the
+# constraint and let a 1200px image overflow every phone. Nothing about an
+# image's caption should decide whether it fits the screen.
+
+CONTENT_KEYED_SELECTOR = re.compile(r"\[\s*(alt|title|placeholder)\s*[~^$*|]?=")
+
+
+def test_no_rule_is_keyed_on_content_attributes():
+    offenders: list[str] = []
+    for sheet in sorted(ASSETS.glob("*.css")):
+        text = _strip_comments(sheet.read_text(encoding="utf-8"))
+        for line_no, line in enumerate(text.splitlines(), 1):
+            if CONTENT_KEYED_SELECTOR.search(line):
+                offenders.append(f"{sheet.name}:{line_no}: {line.strip()[:80]}")
+
+    assert offenders == [], (
+        "stylesheet rules keyed on alt/title/placeholder text: an editorial "
+        f"change to the copy silently changes the layout. {offenders}"
+    )

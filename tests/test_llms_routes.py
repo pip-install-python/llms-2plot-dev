@@ -6,6 +6,8 @@ import re
 import xml.etree.ElementTree as ET
 from urllib.parse import urlparse
 
+import pytest
+
 from conftest import BROWSER_ACCEPT, CRAWLER_UA
 from lib import network_directory as nd
 from lib.constants import BASE_URL
@@ -376,3 +378,21 @@ def test_healthz_resolves_the_country_from_this_requests_headers(client):
         f"/healthz did not resolve this request's country ({geo}) — the "
         "route is not passing its own headers through"
     )
+
+
+def test_resolved_country_reads_explicit_headers_without_a_request():
+    """The context-free pin — the only one that can actually fail.
+
+    The in-request pins above pass even if a Flask route drops its
+    `headers=`: inside a request the context fallback reads the same
+    headers, and the lanes that genuinely break (Starlette/Quart) are
+    unreachable from a Flask-pinned suite. Calling _resolved_country
+    with a plain dict OUTSIDE any request context has no fallback to
+    hide behind (dash-flows' finding, 2026-08-23).
+    """
+    from lib.health import _resolved_country
+
+    result = _resolved_country({"CF-IPCountry": "DE"})
+    if result.startswith("unavailable (pre-2.7.0"):
+        pytest.skip("geo shipped in dash-improve-my-llms 2.7.0")
+    assert "DE" in result, result

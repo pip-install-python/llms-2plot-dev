@@ -189,7 +189,17 @@ def post(url: str, payload: str = "{}") -> int:
         method="POST",
     )
     try:
-        with urllib.request.urlopen(request, timeout=TIMEOUT) as resp:
+        # context= must match fetch()'s — this line shipped WITHOUT it, so on
+        # any Python without OS trust-store integration (macOS: the fleet's
+        # whole local-dev half) every auth POST died in the TLS handshake,
+        # returned 0, and the check accused the app of the exact
+        # configure_app regression it exists to detect. CI never saw it
+        # (Linux verifies fine); no wired test can see it (they monkeypatch
+        # post) — hence the SOURCE pin in tests/test_auth_wiring.py.
+        # Found by flexlayout during the F1 kit adoption (154688e).
+        with urllib.request.urlopen(
+            request, timeout=TIMEOUT, context=SSL_CONTEXT
+        ) as resp:
             return resp.status
     except urllib.error.HTTPError as exc:
         return exc.code
@@ -240,7 +250,17 @@ def wake(base: str) -> bool:
     """
     url = f"{base}/healthz"
     for attempt in range(1, WAKE_ATTEMPTS + 1):
-        status, body, _ = fetch(url, retries=1, timeout=10)
+        try:
+            status, body, _ = fetch(url, retries=1, timeout=10)
+        except TypeError:
+            # A legacy fetch stub — `(url, user_agent, accept)`, pre-wake
+            # vintage — from a fork test that monkeypatches fetch without
+            # patching wake. The real fetch cannot raise TypeError (its
+            # signature takes these kwargs and everything inside its attempt
+            # loop is caught), so this branch can only be a stub's signature
+            # binding; probe bare rather than take the fork's whole suite
+            # down (the 1.6.28 fan-out went red on 7/12 forks exactly here).
+            status, body, _ = fetch(url)
         if status == 200 and re.search(r'"ok"\s*:\s*true', body):
             print(f"  wake  attempt {attempt}/{WAKE_ATTEMPTS}: up")
             return True

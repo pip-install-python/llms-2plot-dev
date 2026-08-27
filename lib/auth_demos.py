@@ -10,9 +10,12 @@ imported — and their callbacks already registered — when pages/markdown.py
 parses the docs at startup. Only one layout (gate card OR full docs) renders
 per request, so sharing the component instances never duplicates IDs.
 
-The table ships EMPTY in the template: entries are site-specific dotted
-paths, so each satellite fills in its own hero example (one entry is plenty —
-this is a funnel, not a gallery).
+The table ships with ONE working entry in the template — the pattern, live —
+and each satellite swaps in its own hero example (one entry is plenty; this
+is a funnel, not a gallery). An empty table is legitimate too: cards render
+without the demo block. Either way tests/test_auth_demos.py holds the line —
+every entry that IS here must resolve on THIS site, because build_demo below
+degrades silently by design.
 
 Entries:
     endpoint -> {
@@ -31,13 +34,22 @@ import logging
 logger = logging.getLogger(__name__)
 
 DEMOS: dict[str, dict] = {
-    # The template ships ONE working entry so every fork sees the pattern
-    # live: gate /examples/visualization (control board or `tier: auth`
-    # frontmatter) and its sign-in card renders this chart above the
-    # "Authentication required" copy. Swap in your own hero example.
-    "/examples/visualization": {
-        "module": "docs.data-visualization.basic_chart",
-        "caption": "Live theme-aware chart",
+    # THIS SITE's hero example, replacing the template's inherited
+    # /examples/visualization entry — a page that does not exist here, whose
+    # module does not exist here, and whose card therefore rendered demo-less
+    # and SILENT from fork time (build_demo swallows the ImportError by
+    # design, and its warning only fires when that endpoint's card renders,
+    # which never happens when the endpoint is not a page). Found fleet-wide
+    # by excalidraw, 2026-08-25; tests/test_auth_demos.py is the loud surface.
+    #
+    # The robots sandbox is the right teaser for this funnel: it runs the
+    # documented package's OWN pure handlers in-process, so a visitor types a
+    # User-Agent and watches the real verdict — no account, no secrets, no
+    # paid model behind it, and every render builds a throwaway config that
+    # cannot touch what the site serves.
+    "/showcase/robots-sandbox": {
+        "module": "docs.robots_sandbox.robots_sandbox",
+        "caption": "Live robots.txt sandbox",
         "max_height": 420,
     },
 }

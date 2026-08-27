@@ -122,19 +122,32 @@ def test_smoke_script_detects_a_stub_body(wired, smoke, monkeypatch, capsys):
 
 
 def test_smoke_script_detects_a_foreign_canonical(wired, smoke, monkeypatch, capsys):
+    """The rewrite host is DERIVED from BASE_URL, never spelled literally.
+
+    Before 1.6.8 this stub spelled the template's hostname: on any renamed
+    fork the replace matched nothing, the canonical stayed correct, and the
+    test passed as a no-op — a guard that silently stops guarding on
+    exactly the sites that need it (found by llms-2plot-dev's fork audit).
+    The in-stub assertion makes that failure mode loud: if the rewrite ever
+    touches a canonical-bearing page without changing it, the test errors
+    instead of vacuously passing.
+    """
     original = smoke.fetch
 
     def rehosted(url, user_agent=smoke.BROWSER_UA, accept=None):
         status, body, headers = original(url, user_agent, accept)
-        # Read the host from constants rather than spelling it: a fork
-        # changes BASE_URL and this check would otherwise silently stop
-        # rewriting anything and pass on a no-op.
-        from lib.constants import BASE_URL
-
-        return status, body.replace(
-            f'rel="canonical" href="{BASE_URL}',
+        needle = f'rel="canonical" href="{BASE}'
+        rewritten = body.replace(
+            needle,
             'rel="canonical" href="https://someone-elses-host.example.com',
-        ), headers
+        )
+        if 'rel="canonical"' in body:
+            assert rewritten != body, (
+                "canonical present but the rewrite matched nothing — the "
+                "stub's host has drifted from BASE_URL and this test would "
+                "pass vacuously"
+            )
+        return status, rewritten, headers
 
     monkeypatch.setattr(smoke, "fetch", rehosted)
     assert wired.main(BASE) > 0
@@ -440,6 +453,28 @@ def test_a_cold_host_wakes_and_the_probe_requires_ok_true(smoke, monkeypatch, ca
     assert not probes, "wake stopped before the healthy probe"
     assert len(faketime.slept) == 3, "one pause per failed probe, none after success"
     assert "attempt 4" in capsys.readouterr().out
+
+
+def test_wake_survives_a_legacy_fetch_stub(smoke, monkeypatch, capsys):
+    """A pre-wake-vintage fetch stub must not TypeError the whole suite.
+
+    Every fork owns a version of THIS file, and the older ones monkeypatch
+    fetch as `(url, user_agent, accept)` without patching wake — the 1.6.28
+    fan-out shipped wake()'s `fetch(url, retries=1, timeout=10)` into that
+    and went red on 7 of 12 forks before a single check ran. wake now
+    falls back to a bare `fetch(url)` when the stub rejects its kwargs, so
+    a template copy landing ahead of the fork's stub update degrades to
+    the fork's own honest check results instead of a suite-wide crash.
+    """
+    monkeypatch.setattr(smoke, "time", _FakeTime())
+
+    def legacy(url, user_agent=smoke.BROWSER_UA, accept=None):
+        assert url.endswith("/healthz")
+        return 200, '{"backend":"flask","ok":true}', {}
+
+    monkeypatch.setattr(smoke, "fetch", legacy)
+    assert smoke.wake("https://x") is True
+    assert "attempt 1" in capsys.readouterr().out
 
 
 def test_a_host_that_never_wakes_is_one_failure_not_a_cascade(

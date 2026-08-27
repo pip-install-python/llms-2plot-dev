@@ -5,6 +5,91 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [llms-2plot-dev 1.1.0] - 2026-08-27
+
+**Kit adoption — consumed `SYNC-1.6.10-1.6.16`, `SYNC-1.6.17-1.6.21` and
+`SYNC-1.6.22-1.6.29` at dash-documentation-boilerplate 1.6.29 (`5589318`).**
+This host was a live kit-lineage site that had never been on the fleet
+roster; it joins with this release. Per-item dispositions are in the sync
+report; the deliberate differences are now recorded in `DIVERGENCES.md`.
+
+### Added
+
+- **The `.claude/` development kit** — `CLAUDE.md` (this site's own guide
+  above the network's behavioral contract and verification traps, both
+  ported verbatim), `settings.json` pointed at THIS host, and the three
+  shipped skills (`wire-verify`, `sync-template`, `report`) byte-verbatim.
+  `.gitignore` moves from a blanket `.claude/` ignore to the template's
+  ALLOW-LIST form, which is what keeps credentials under `.claude/`
+  structurally uncommittable, and gains the session-document block.
+- **`DIVERGENCES.md`** — six recorded divergences with reasons, plus the
+  machine-readable `byte-owned` fence (empty: this fork makes no byte-level
+  claim on any `sync-verbatim` path, and drift is never fenced).
+- **`tests/test_claude_kit.py`, `tests/test_auth_demos.py`** — byte-verbatim
+  kit cargo. **`tests/test_python_version.py`** — the one-fleet-Python
+  agreement pins.
+- **`python` on `/healthz`**, all three backends, plus the battery's
+  `python_matches_declared` check: the serving interpreter is now on the
+  wire, so a stale image can be contradicted from outside.
+- **The configured-auth branch is certified.** Two pins render
+  `lib.auth.register()` with a FAKE non-empty Clerk config — the branch a
+  zero-secret suite had never executed, including the `pk_live`
+  satellite-mode auto-enable that can only exist in production.
+- **CI asserts Docker's own health verdict** (`docker inspect
+  .State.Health.Status`), failing on `none`: the external curl proves the
+  app answers, never the HEALTHCHECK instruction itself.
+
+### Changed
+
+- **One fleet Python: 3.14**, in every encoding at once — `Dockerfile`
+  (`python:3.14-slim`, a MINOR tag: the old `3.11.8` patch pin could never
+  receive a 3.11.x security release), the CI matrix main, the lint and
+  pip-audit jobs, `cd.yml`'s verify job, and `render.yaml`'s
+  `PYTHON_VERSION` (full `X.Y.Z`, as Render's native runtime requires). The
+  window legs are 3.13 and 3.12.
+- **`Dockerfile` honors `$PORT`** — shell-form `CMD` with the default at the
+  point of use (`${PORT:-8550}`), and the HEALTHCHECK probes the same
+  variable. Exec-form `CMD` never expands env, so the old form hardcoded the
+  port whatever the platform asked for.
+- **`render.yaml` names THIS host.** Every identity field still said
+  `boilerplate` — service name, domain, `APP_BASE_URL`, `SATELLITE_APP_KEY`,
+  `AD_APP_ID` — inherited at fork time and never corrected, while production
+  served `llms.2plot.dev` with `app: "llms"`. `POLICY_STORE_FILE` is now
+  declared on the mounted disk beside the other two stores.
+- **CD is sized for the worst build**: the build-match wait runs 100 × 15s
+  under a 30-minute job timeout (a floor bump busts the pip cache by design,
+  so this pipeline's most important deploy is also its slowest), a hookless
+  deploy emits `::warning` rather than a quiet notice, and the verify job
+  now stands down on a `skipped` deploy as well as a `cancelled` one.
+- **`.github/dependabot.yml`** — the 1.6.24 rewrite: the pip ecosystem is
+  removed entirely. On range requirements dependabot can only propose FLOOR
+  RAISES, so the old allow-list group structurally produced the very PR
+  class it existed to suppress. Floors move through sync specs, every
+  encoding at once. Security updates ride GitHub's separate channel.
+- **`scripts/smoke_live.py`** is the template's current file: the auth POST
+  now carries the same SSL context as `fetch` (without it every POST died in
+  the macOS handshake and read as missing auth wiring), and `wake()`
+  tolerates a legacy `fetch` stub. A source pin in
+  `tests/test_auth_wiring.py` holds the SSL half — no wired test can, they
+  all monkeypatch `post`.
+- **The gate card promises only what ships** — "and the AI assistant" is
+  gone from the demo-card copy; nothing here wires one.
+- **`lib/auth_demos.py` points at a demo this site can render.** The
+  inherited `/examples/visualization` entry named a page and a module that
+  exist on no fork; every gate card rendered demo-less and silent since fork
+  time. This site's hero is `/showcase/robots-sandbox`.
+
+### Removed
+
+- **The vestigial Node layer** (template issue #12, CVE-2026-1615, removed
+  upstream in 1.6.9 and carried here with this Dockerfile sync).
+  `package.json` / `package-lock.json` were dash-mantine-components'
+  component-build toolchain, inherited through the fork lineage and used by
+  nothing in this repo — no webpack config, no `src/ts`, no CI job, no
+  served asset — while the image apt-installed nodejs+npm and `npm
+  install`ed a known-vulnerable `jsonpath@1.1.1` into every production
+  build.
+
 ## [llms-2plot-dev 1.0.0] - 2026-08-22
 
 **This repository forked here.** Everything below this entry is the history of

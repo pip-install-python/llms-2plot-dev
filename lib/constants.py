@@ -63,7 +63,7 @@ SITE_SHORT_NAME = "Dash Improve My LLMs"
 PAGE_TITLE_PREFIX = f"{SITE_SHORT_NAME} | "
 
 PRIMARY_COLOR = "teal"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.1.0"
 
 # ---------------------------------------------------------------------------
 # The network's internal-traffic contract

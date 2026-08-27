@@ -569,3 +569,81 @@ for this pass, the **full suite** passes on it: 600 passed / 4 skipped.
 
 **603 passed / 1 skipped (flask), 600 / 4 (fastapi), 600 / 4 (quart)**,
 flake8 clean.
+
+---
+
+## 13. Kit adoption — template 1.6.29, spec-alone (2026-08-27)
+
+The first sync this repo consumed **from the specs rather than from a
+hand-written prompt**: `sync/README.md`, then `SYNC-1.6.10-1.6.16`,
+`SYNC-1.6.17-1.6.21` and `SYNC-1.6.22-1.6.29` at
+dash-documentation-boilerplate `5589318` (1.6.29). Every item's **detect**
+ran before anything was applied; four items were already-present from the
+two hand-carried syncs in sections 11 and 12, and the rest landed here.
+
+This host had been live on the kit lineage since 2026-08-23 and had never
+been on the fleet roster — the F4 battery found it with no row. Joining the
+roster is what this section records.
+
+### What the detects found that a prompt would not have
+
+Three things, none of which any earlier session had a reason to look at:
+
+1. **`render.yaml` still described `boilerplate.2plot.dev`** — service name,
+   domain, `APP_BASE_URL`, `SATELLITE_APP_KEY`, `AD_APP_ID`, all inherited at
+   fork time and never corrected, while production has served
+   `llms.2plot.dev` with `app: "llms"` since the cutover. The blueprint was a
+   document that lied; nothing read it, which is exactly why it survived
+   three rounds of verification. Spec item 5 sent me into the file for one
+   line (`PYTHON_VERSION`) and the rest was sitting there.
+
+2. **The Node layer was still in the production image.** `package.json` was
+   dash-mantine-components' component-build toolchain — webpack, ts-loader,
+   react-docgen, `jsonpath@1.1.1` — inherited through the fork lineage and
+   used by nothing here: no webpack config, no `src/ts`, no CI job, no served
+   asset. The Dockerfile apt-installed nodejs+npm and `npm install`ed it into
+   every build anyway. The template removed this at **1.6.9**, one release
+   BELOW the spec range, with the changelog note that docs-fleet forks pick
+   it up "with the next Dockerfile sync". No spec item carries it, so a
+   spec-alone consumption would have skipped it — the diff against the
+   template's Dockerfile is what surfaced it. Filed as a spec correction.
+
+3. **Nothing had ever rendered the configured auth branch.** `conftest.py`
+   pins every `CLERK_*` variable empty before anything imports `run.py` —
+   correct, and the reason every fail-closed assertion in `test_access.py`
+   means something — but the consequence is that `lib.auth.register()`'s
+   configured half, including the `pk_live` satellite-mode auto-enable that
+   can only ever exist in production, was certified by nothing. That is spec
+   item 7 of the last range, whose own template adoption is still `open`.
+
+### The write guard, and how the kit landed anyway
+
+`.claude/settings.json` and `.claude/skills/` are permission-classed in this
+seat — `mkdir .claude/skills` answers *Operation not permitted*. The guard is
+correct and was not routed around: both were staged in the scratchpad,
+verified byte-identical to the template's, and copied by the owner with a
+one-line command. `.claude/CLAUDE.md` is writable and was written directly —
+this site's own guide above the network's behavioral contract and
+verification traps, which port verbatim.
+
+### The fence
+
+`DIVERGENCES.md` is new, with six recorded divergences and an **empty**
+`byte-owned` fence. The prose was audited against every `sync-verbatim` path
+in the three specs before the fence was filled: this fork makes no
+byte-level claim on any of them. Where this fork's `.github/dependabot.yml`
+differed from the template's it was **behind** 1.6.24, not chosen — that is
+drift, and drift is never fenced, because the fan-out is how it gets fixed.
+
+### One fleet Python
+
+3.14, in every encoding at once: `Dockerfile` (a MINOR tag — the old
+`3.11.8` patch pin could never receive a 3.11.x security release), the CI
+matrix main with 3.13/3.12 as the window legs, the lint and pip-audit jobs,
+`cd.yml`'s verify job, and `render.yaml`'s `PYTHON_VERSION` (full `X.Y.Z`,
+which Render's native runtime requires). `/healthz` now carries `python`, so
+the wire can contradict a stale image — and `scripts/network_smoke.py`'s
+`python_matches_declared` is the teeth. Measured both lanes locally before
+pushing: `flask: python='3.12.3' geo.resolved='FR (via cf-ipcountry)'` and
+the same for `fastapi` (3.12.3 is this laptop's venv; 3.14 is what the image
+and CI serve).

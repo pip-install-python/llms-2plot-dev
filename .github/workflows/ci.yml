@@ -65,7 +65,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          # The fleet Python — tests/test_python_version.py pins every
+          # encoding of it (Dockerfile FROM tag, matrix main, render.yaml,
+          # this job and pip-audit) to one minor.
+          python-version: "3.14"
           cache: pip
       - run: pip install flake8
       - name: flake8
@@ -99,23 +102,35 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Every backend gets a run on the current Python and the pinned Dash...
-        python: ["3.12"]
+        # Every backend gets a run on the FLEET Python — decided by
+        # evidence, not preference: 3.14 ran the template's full suite and
+        # its docker boot/battery green before it became the main
+        # (2026-08-25), with dash 4.4.1, dash-improve-my-llms >=2.7.1 and
+        # cryptography >=50 all importing. It is also what the production
+        # image serves (Dockerfile FROM tag, same minor —
+        # tests/test_python_version.py pins the two together), which the old
+        # matrix never tested: main said 3.12 while the image was a
+        # patch-pinned 3.11.8 that nothing here exercised.
+        python: ["3.14"]
         backend: [flask, fastapi, quart]
         dash: [""]
         include:
-          # ...the supported Python range gets a run on the default backend...
-          - python: "3.11"
+          # ...the two adjacent minors keep the compat window three wide on
+          # the default backend...
+          - python: "3.13"
             backend: flask
             dash: ""
-          - python: "3.13"
+          - python: "3.12"
             backend: flask
             dash: ""
           # ...and the bottom of the `~=4.4.1` range is pinned explicitly on
           # both backends that matter, so a 4.4.0-only regression cannot hide
           # behind pip resolving to 4.4.1. 4.3.0 is deliberately absent: its
           # FastAPI backend 500s on every non-root URL (upstream, fixed in
-          # 4.4.0), which is why requirements.txt floors at 4.4.
+          # 4.4.0), which is why requirements.txt floors at 4.4. These two
+          # rows stay on a window leg (3.12), not the main: each include row
+          # varies ONE axis — these vary dash, the rows above vary python —
+          # so a red here always names its cause.
           - python: "3.12"
             backend: fastapi
             dash: "4.4.0"
@@ -186,6 +201,13 @@ jobs:
 
       - name: Boot under a production server
         if: matrix.backend == 'flask'
+        env:
+          # This gunicorn serves the MATRIX LEG's interpreter (3.13/3.12 on
+          # the window rows) while the Dockerfile declares the fleet Python —
+          # off-contract for the battery's python_matches_declared check by
+          # design, so it stands down here. The docker job below and CD's
+          # verify leave it armed: there the interpreter IS the artifact.
+          SMOKE_PYTHON_DECLARED: ignore
         run: |
           gunicorn run:server -b 127.0.0.1:8550 --daemon --access-logfile - --error-logfile -
           for _ in $(seq 1 30); do
@@ -274,11 +296,37 @@ jobs:
           docker logs --tail 100 docs
           exit 1
 
-      # The SAME script CD runs against the live host (once B3 sets the
-      # SITE_URL repo variable — see cd.yml's header), so a failure in CI and
-      # a failure in production read identically.
+      # The SAME script CD runs against the live host (once the SITE_URL repo
+      # variable is set — see cd.yml's header), so a failure in CI and a
+      # failure in production read identically.
       - name: Smoke battery against the booted container
         run: python3 scripts/network_smoke.py --base-url http://127.0.0.1:8550
+
+      # The guard on the guard (emojimart's F2 finding, 2026-08-24): the
+      # boot step curls /healthz from OUTSIDE, which proves the app binds
+      # and answers — but says nothing about the Dockerfile's HEALTHCHECK
+      # instruction itself. A broken probe (wrong port, missing binary,
+      # bad quoting) ships silently while every external check stays
+      # green, and the orchestrator that relies on container health sees
+      # an opaque box. Poll Docker's own verdict: with --interval=30s and
+      # --start-period=20s the first probe lands within ~50s.
+      - name: Assert Docker's own health verdict
+        run: |
+          for i in $(seq 1 30); do
+            status="$(docker inspect -f '{{.State.Health.Status}}' docs 2>/dev/null || echo none)"
+            if [ "$status" = "healthy" ]; then
+              echo "docker reports healthy after ~$((i*3))s"
+              exit 0
+            fi
+            if [ "$status" = "none" ]; then
+              echo "image has NO HEALTHCHECK — the container is opaque to its orchestrator"
+              exit 1
+            fi
+            sleep 3
+          done
+          echo "HEALTHCHECK never reported healthy (last: $status) — the probe itself is broken:"
+          docker inspect -f '{{json .State.Health}}' docs || true
+          exit 1
 
       - name: Container logs (for the record)
         if: always()
@@ -296,7 +344,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.14"
       - run: pip install pip-audit
       # Skip local vendor/ paths — pip-audit can only assess PyPI dists.
       - run: |

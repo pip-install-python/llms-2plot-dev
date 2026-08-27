@@ -1,4 +1,12 @@
-FROM python:3.11.8-slim
+# MINOR tag on purpose — never a patch pin. `3.11.8-slim` sat here while the
+# matrix said 3.12 and render.yaml said 3.12.0: three declared Pythons, none
+# tested against the image, and the patch pin meant the image never received
+# a 3.11.x security release either (ops-seat finding, 2026-08-25). The minor
+# tag tracks patch releases through Docker Hub; the minor itself is the ONE
+# fleet Python, and tests/test_python_version.py pins that this tag, the CI
+# matrix main and render.yaml's PYTHON_VERSION all agree — while /healthz
+# reports the serving interpreter so the wire can contradict a stale image.
+FROM python:3.14-slim
 
 # Unbuffered stdout, or none of the app's print() diagnostics ever reach the
 # platform logs: Python block-buffers stdout when it is not a tty, so the
@@ -8,8 +16,17 @@ FROM python:3.11.8-slim
 # stderr. An entire misconfiguration class debugs itself once these print.
 ENV PYTHONUNBUFFERED=1
 
+# curl only — the HEALTHCHECK below uses it. Deliberately NO nodejs/npm:
+# this image apt-installed both to `npm install` a package.json that was
+# dash-mantine-components' component-build toolchain, inherited through the
+# fork lineage and used by NOTHING in this repo (no webpack config, no
+# src/ts, no CI job, no served asset) — while shipping a known-vulnerable
+# jsonpath into every production image (template issue #12, CVE-2026-1615,
+# removed upstream in 1.6.9 and carried here with this Dockerfile sync). A
+# docs site is a Python app; if a fork genuinely builds JS components it adds
+# its own toolchain knowingly, not by inheritance.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        nodejs npm curl \
+        curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -44,16 +61,18 @@ RUN pip install -r requirements.txt
 # gunicorn version inside this image, which is what keeps the dodge honest.
 RUN pip install --no-deps markdown2dash==0.1.2
 
-# Install node dependencies
-COPY package.json ./
-RUN npm install
-
 COPY . .
 
 # The 2plot.ai hub's hourly sweep probes /healthz; give the container the same
 # check so an unhealthy process is visible to the orchestrator too.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD curl -fsS http://localhost:8550/healthz || exit 1
+    CMD curl -fsS http://localhost:${PORT:-8550}/healthz || exit 1
 
 EXPOSE 8550
-CMD ["gunicorn", "run:server", "-b", "0.0.0.0:8550"]
+# Shell form on purpose: exec-form CMD never expands env, so the old
+# ["gunicorn", ..., "0.0.0.0:8550"] hardcoded the port no matter what the
+# platform asked for. run.py has honored $PORT since 1.6.8; the container
+# lane didn't, and only worked on Render because Render port-detects. The
+# default is spelled AT THE POINT OF USE, so a variable set EMPTY cannot
+# collapse the bind the way a bare ${PORT} would.
+CMD gunicorn run:server -b 0.0.0.0:${PORT:-8550}

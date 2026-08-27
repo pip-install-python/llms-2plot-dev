@@ -1,11 +1,19 @@
-# Render Blueprint for boilerplate.2plot.dev
+# Render Blueprint for llms.2plot.dev
 #
 # Applies to a new service with `render blueprint launch`, and documents the
-# deployment for anyone forking this template. Values marked sync:false are
-# per-deployment and must be set in the Render dashboard.
+# deployment. Values marked sync:false are per-deployment and must be set in
+# the Render dashboard.
+#
+# INHERITED-IDENTITY CORRECTION, 2026-08-26: every identity field below said
+# `boilerplate` until this sync — the template's own service name, domain and
+# app key, carried through the fork untouched while production served
+# llms.2plot.dev with `app: "llms"`. A blueprint that names another host is
+# the same defect class as an inherited workflow that deploys one: harmless
+# until someone applies it. The live service's dashboard values were always
+# right; this file now agrees with them.
 services:
   - type: web
-    name: boilerplate-2plot-dev
+    name: llms-2plot-dev
     runtime: python
     plan: starter
     region: oregon
@@ -17,17 +25,25 @@ services:
     startCommand: gunicorn run:server -b 0.0.0.0:$PORT --workers 2 --timeout 60
     healthCheckPath: /healthz
     domains:
-      - boilerplate.2plot.dev
+      - llms.2plot.dev
     envVars:
       # THE value to get right. It drives <link rel="canonical">, sitemap.xml
       # and the absolute URLs in llms.txt. A fork that leaves this unset
       # inherits the boilerplate's own domain and tells Google it is a
       # duplicate — so lib/constants.py refuses to boot on Render without it.
       - key: APP_BASE_URL
-        value: https://boilerplate.2plot.dev
+        value: https://llms.2plot.dev
 
+      # ONE fleet Python. `runtime: python` above is the NATIVE runtime, so
+      # this key is REQUIRED and Render demands the full X.Y.Z encoding — the
+      # MINOR must match the Dockerfile's `FROM python:3.14-slim` tag, and
+      # tests/test_python_version.py holds the two together. The patch is a
+      # human bump; the minor drifting apart is the class that pin exists for.
+      # (On a `runtime: docker` service this key must be ABSENT instead:
+      # nothing reads it there, and a string that looks like the platform's
+      # setting and can never be true is the same defect arriving as the fix.)
       - key: PYTHON_VERSION
-        value: "3.12.0"
+        value: "3.14.7"
 
       # flask | fastapi | quart. FastAPI and Quart need the matching dash
       # extra installed and an ASGI start command (uvicorn), so switching this
@@ -54,7 +70,7 @@ services:
       # Also the bulletin's identity to the hub (lib/bulletin.py), so a fork
       # that changes this stops receiving the boilerplate's announcements.
       - key: SATELLITE_APP_KEY
-        value: boilerplate
+        value: llms
 
       # This app's identity to the 2plot.dev ad network (lib/ad_client.py).
       # Set explicitly rather than left to the code default so the value is
@@ -62,7 +78,7 @@ services:
       # SATELLITE_APP_KEY above, so /admin/ad-board, /traffic and the bulletin
       # all name this app identically.
       - key: AD_APP_ID
-        value: boilerplate
+        value: llms
 
       # Hub-published tips and announcements in the llms.txt viewer header.
       # Unset, the header still renders on the package's defaults with an
@@ -165,6 +181,15 @@ services:
       # of that warning in a deploy log is the acceptance check.
       - key: PAGE_VISIBILITY_FILE
         value: /var/data/page_visibility.json
+
+      # The writable policy store behind the package's CALLABLE seams — the
+      # geo denylist and the per-vendor policy the control board mutates.
+      # Same disk, same reason as the two rows above: unset, it falls back to
+      # the app directory on an ephemeral filesystem and every toggle resets
+      # on the next deploy. lib/policy_store.py warns loudly at boot when it
+      # is missing OR when /var/data is not actually a mounted disk.
+      - key: POLICY_STORE_FILE
+        value: /var/data/policy_overrides.json
 
     disk:
       name: analytics

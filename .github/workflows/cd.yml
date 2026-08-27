@@ -2,9 +2,7 @@ name: CD
 
 # Deploys llms.2plot.dev, then checks the live site.
 #
-# ============================ B3 TODO =====================================
-# THE LIVE HALF OF THIS WORKFLOW IS DORMANT UNTIL A RENDER SERVICE EXISTS.
-#
+# ======================= THE LIVE HALF IS DORMANT =========================
 # Everything that touches a running host — the build-match wait and the whole
 # `verify` job — is gated on the repository variable `SITE_URL`. While it is
 # unset those steps skip with a notice and CD is effectively "CI plus an
@@ -12,19 +10,22 @@ name: CD
 #
 # This is not caution for its own sake. The template shipped
 # SITE_URL=https://boilerplate.2plot.dev hard-coded, so an unguarded run here
-# would poll ANOTHER SITE's /healthz for fifteen minutes waiting for a commit
-# it will never serve, then battery it and report red — a fork failing CD on
-# day one over a host it does not own. (Same class as the excalidraw finding:
-# inherited workflows reference things that do not exist in the fork and
-# deploy hosts that are not yours.) Pointing it at llms.2plot.dev today is no
-# better: that domain still serves the OUTGOING site this migration replaces.
+# would poll ANOTHER SITE's /healthz waiting for a commit it will never
+# serve, then battery it and report red — a fork failing CD on day one over a
+# host it does not own. (Same class as the excalidraw finding: inherited
+# workflows reference things that do not exist in the fork and deploy hosts
+# that are not yours.) The guard is a recorded divergence — see
+# DIVERGENCES.md — and it stays.
 #
-# TO UNGUARD, in two steps, no workflow edit either time:
-#   B3 (staging): set the repo variable SITE_URL to the service's
-#                 https://<name>.onrender.com URL. The wait and the battery
-#                 come alive against staging.
-#   B5 (cutover): change that same variable to https://llms.2plot.dev once
-#                 the domain moves.
+# STATUS 2026-08-26: the cutover HAPPENED. https://llms.2plot.dev serves this
+# app (healthz `app: "llms"`, build == HEAD, verified by hand every round),
+# so the remaining condition is met and the variable is simply not set yet.
+#
+# TO UNGUARD — one repository setting, no workflow edit:
+#   Settings → Secrets and variables → Actions → Variables →
+#   SITE_URL = https://llms.2plot.dev
+# The build-match wait and the whole verify job come alive on the next push,
+# and hand-verification stops being the only proof this repo has.
 # ==========================================================================
 #
 # The deploy step POSTs to a Render deploy hook held in the
@@ -65,25 +66,29 @@ jobs:
     name: deploy to render
     needs: [test]
     runs-on: ubuntu-latest
-    # Long enough for the build-match wait below (up to 60 × 15s) and no
-    # longer. Without it the job inherits GitHub's six-hour default, which
-    # is how a platform that never comes back healthy holds the
-    # `cd-production` concurrency group all day.
-    timeout-minutes: 20
+    # Long enough for the build-match wait below (up to 100 × 15s = 25
+    # minutes) and no longer. Without it the job inherits GitHub's six-hour
+    # default, which is how a platform that never comes back healthy holds
+    # the `cd-production` concurrency group all day. Sized for the WORST
+    # build, not the median: a floor bump busts the Docker dependency cache
+    # by design, so this pipeline's most important deploy is also Render's
+    # slowest — dash-email's wait timed out on exactly that build class
+    # (2026-08-23) with the old 60 × 15s window.
+    timeout-minutes: 30
     environment:
       name: production
-      # B3 TODO: restore `url: ${{ inputs.target_url || vars.SITE_URL }}`
-      # when SITE_URL is set. Omitted while dormant rather than evaluated to
-      # an empty string — the deployment panel simply shows no link, and the
-      # first run in this repo's history does not hinge on how GitHub treats
-      # a blank environment URL.
+      # Restore `url: ${{ inputs.target_url || vars.SITE_URL }}` when
+      # SITE_URL is set. Omitted while dormant rather than evaluated to an
+      # empty string — the deployment panel simply shows no link rather than
+      # this repo's runs hinging on how GitHub treats a blank environment
+      # URL.
     outputs:
       deployed: ${{ steps.hook.outputs.deployed }}
     steps:
       - name: Say plainly that the live half is dormant
         if: env.SITE_URL == ''
         run: |
-          echo "::notice::No Render service yet — SITE_URL repo variable is unset, so the build-match wait and the live batteries are skipped. Set SITE_URL to the .onrender.com URL at B3 to bring them up (see this workflow's header)."
+          echo "::warning::The SITE_URL repo variable is unset, so the build-match wait and the live batteries are SKIPPED — this run certifies nothing about production. The site is live at https://llms.2plot.dev; set SITE_URL to it (Settings → Variables) to bring the live half up. See this workflow's header."
 
       - name: Trigger the Render deploy hook
         id: hook
@@ -91,7 +96,12 @@ jobs:
           HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
           if [ -z "$HOOK" ]; then
-            echo "::notice::RENDER_DEPLOY_HOOK_URL is not set. Skipping the deploy trigger and verifying whatever is currently live."
+            # ::warning, not ::notice — dash-email's finding (2026-08-23):
+            # with no hook AND a push Render's autoDeploy happened to skip,
+            # nothing deployed at all and the build-match wait below timed
+            # out on a deploy nobody had started. The wait refusing was
+            # honest; the quiet notice was why the cause took a run to see.
+            echo "::warning::RENDER_DEPLOY_HOOK_URL is not set — this push deploys only if render.yaml autoDeploy fires. The build-match wait below still holds for THIS commit either way."
             echo "deployed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -99,9 +109,9 @@ jobs:
           echo "deployed=true" >> "$GITHUB_OUTPUT"
 
       - name: Wait for THIS build to serve traffic
-        # B3 TODO: skips while SITE_URL is unset — see the header. Without
-        # this guard the loop below polls a host this repo does not own for
-        # fifteen minutes and then fails the run.
+        # Skips while SITE_URL is unset — see the header. Without this guard
+        # the loop below polls a host this repo does not own for twenty-five
+        # minutes and then fails the run.
         if: env.SITE_URL != ''
         # NOT gated on the hook step: with RENDER_DEPLOY_HOOK_URL unset,
         # Render's own autoDeploy ships the commit minutes after the push —
@@ -121,7 +131,7 @@ jobs:
           want="${GITHUB_SHA}"
           matched=0
           ok=0
-          for _ in $(seq 1 60); do
+          for _ in $(seq 1 100); do
             body="$(curl -fsS "$SITE_URL/healthz" 2>/dev/null || true)"
             if [ -n "$body" ]; then
               build="$(printf '%s' "$body" | python3 -c 'import sys,json;print(json.load(sys.stdin).get("build",""))' 2>/dev/null || true)"
@@ -146,11 +156,16 @@ jobs:
   verify:
     name: verify the live site
     needs: [deploy]
-    # B3 TODO: the whole job is dormant until SITE_URL names a real service.
+    # The whole job is dormant until SITE_URL names a real service.
     # `vars.SITE_URL` rather than `env.SITE_URL` because job-level `if` is
     # evaluated before the job's env context exists.
+    # 'skipped' as well as 'cancelled' (muicharts' guard, 2026-08-23): a
+    # deploy job that never ran leaves no build-match wait behind it, so a
+    # verify that fires anyway certifies whatever build happens to be
+    # serving and turns one cause into two red jobs.
     if: >-
       always() && needs.deploy.result != 'cancelled'
+      && needs.deploy.result != 'skipped'
       && (inputs.target_url || vars.SITE_URL) != ''
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -158,7 +173,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          # The fleet Python — tests/test_python_version.py pins this literal
+          # against the Dockerfile's FROM tag.
+          python-version: "3.14"
 
       # The network battery first: it is the same script, with the same check
       # names, that CI ran against the container this deploy shipped. A name

@@ -42,6 +42,7 @@ documentation, not a directive, and expanding it would close the fence early.
 | `lib/page_tiers.py` | The declared tier ledger — the second half of the same one declared value |
 | `lib/health.py` / `lib/asgi_routes.py` | `/healthz` — one payload builder, three backends |
 | `pages/control_board.py` | `/admin/control-board` — live tier, llms.txt and policy toggles (admin-gated, fails closed) |
+| `pages/traffic.py` | `/admin/traffic` — this host's own crawler ledger: vendor × day, vendor → tier, top paths (same gate as the board) |
 | `lib/auth_demos.py` | Live-demo teasers rendered inside the sign-in gate cards |
 | `assets/main.css` | Custom CSS |
 | `templates/index.html` | HTML template (meta tags, SEO) |
@@ -136,7 +137,27 @@ they win.
   tests, CI): grep the number, move every one.
 - `/healthz` build == HEAD is the deploy proof; a missing geo block
   on dimll ≥2.7 means the cache trap fired (unless DIVERGENCES.md
-  says this host's healthz is deliberately minimal).
+  says this host's healthz is deliberately minimal). Since 1.6.35
+  HEAD means **HEAD of `release`**, not of main: Render deploys
+  `release` and only cd.yml's `deploy` job writes it, as a
+  fast-forward push of the run's sha after a green matrix. `main`
+  ahead of `release` is an uncertified push pending — never drift,
+  never a hand deploy. Compare against `origin/release`.
+- **There is ONE classifier**, `dash_improve_my_llms.classify()`.
+  `lib/analytics_tracker.py` delegates `is_bot` / `detect_bot_type`
+  to it and ends with ZERO User-Agent strings; the old in-module
+  lists filed ClaudeBot (Anthropic's TRAINING crawler) under
+  "search" and counted every UA-less client as a person. A token the
+  registry lacks is a PUSHBACK to the package seat, never a list
+  restored here — `tests/test_analytics_classifier.py` greps this
+  file for the old tokens. Consequence to expect on adoption day:
+  `human_hits` DROPS and `bot_hits` RISES. That is the number
+  becoming true.
+- An absent User-Agent is a CRAWLER at dimll ≥2.8, not a desktop
+  human — so a test that probes a browser-lane surface with no UA
+  silently receives the crawler document and fails on something
+  else entirely. Send `BROWSER_UA` from conftest when the browser
+  lane is what you mean to test.
 - Probe with GET, not HEAD — HEAD responses omit the Link headers.
 - Run-watchers keyed on a commit sha can match Dependabot's runs on
   the same sha — key on the workflow path (cd.yml) instead.
@@ -151,6 +172,10 @@ they win.
   build a descendant of the wanted sha, via the compare API)
   instead of going red at timeout, and the remedy is policy —
   actions PRs: human merge when green; never a bot actor on main.
+  (1.6.35 closes the mechanism, not the policy: with the hook gone
+  and Render watching `release`, a push to main — bot-merged or not
+  — no longer reaches production at all. Only the `deploy` job's
+  fast-forward after a green matrix does.)
 - Anonymous api.github.com is 60 requests/hour. With no `gh` and no
   token, read a run ONCE after CI's own jobs report complete — a
   blind 20 s poll loop spends the whole budget reading rate-limit

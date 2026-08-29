@@ -117,6 +117,21 @@ python-dotenv>=1.0.0
 # (the invented daily dates are gone — Google discards a sitemap of lies
 # wholesale), JSON-LD publisher.logo, and the llms.txt viewer banner
 # de-dup. Floor, not pin: the fleet upgrades through this line.
+# 2.8.0 floor (2026-08-29) — the LEDGER round. Not a feature this app can
+# degrade without: `lib/analytics_tracker` imports `classify` and
+# `_ledger.EVENT_FIELDS` at module scope and `run.py` calls
+# `on_document_read` unconditionally, so anything lower is an ImportError at
+# boot. What the floor buys: ONE classifier — `classify()` is the same
+# vendor registry robots.txt is rendered from, so what this site SAYS about
+# a vendor and what it COUNTS finally agree (the module's own UA lists filed
+# ClaudeBot, Anthropic's TRAINING crawler, under "search" and counted every
+# UA-less client as a person); the READ EVENT, one row per corpus document
+# served, carrying tier, verdict, bytes and verified vendor identity, which
+# `/admin/traffic` reads back; and `Vary: User-Agent` on the lane-split
+# responses. 2.8.1 will write the resolved `policy` on every event — until
+# then it is None and the rollup groups it as "default", which is why this
+# floor does NOT wait for it.
+#
 # 2.7.1 floor (2026-08-23). TWO releases matter here and the floor names the
 # later one deliberately — the fleet's floor round happens once.
 #
@@ -139,10 +154,10 @@ python-dotenv>=1.0.0
 #
 # 2.6.1 remains the previous rung and its reason is still live: below it the
 # universal prerender ships VISIBLE to non-JS consumers.
-dash-improve-my-llms[flask]>=2.7.1
-# dash-improve-my-llms[fastapi]>=2.7.1   # Dash 4.4+ FastAPI backend
-# dash-improve-my-llms[quart]>=2.7.1     # Dash 4.4+ Quart backend
-# dash-improve-my-llms[all]>=2.7.1       # all three
+dash-improve-my-llms[flask]>=2.8.0
+# dash-improve-my-llms[fastapi]>=2.8.0   # Dash 4.4+ FastAPI backend
+# dash-improve-my-llms[quart]>=2.8.0     # Dash 4.4+ Quart backend
+# dash-improve-my-llms[all]>=2.8.0       # all three
 
 # Clerk authentication (dash-clerk-auth, vendored — not on PyPI).
 #

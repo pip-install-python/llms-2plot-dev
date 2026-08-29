@@ -49,6 +49,7 @@ from dash_improve_my_llms import (
     add_llms_routes,
     LLMSConfig,
     RobotsConfig,
+    on_document_read,
     register_page_metadata,
 )
 
@@ -76,10 +77,24 @@ from dash_improve_my_llms import (
 # (html-to-text extractors, plausibly crawler content-weighting) reads
 # "Loading..." instead of the page's prose — the outside-audit finding of
 # 2026-08-22. tests/test_pages.py pins the visible shape.
+# 2.8.0 is the ledger floor (2026-08-29): ONE classifier — `classify()` is
+# the same vendor registry robots.txt is rendered from, and
+# lib/analytics_tracker delegates to it instead of carrying a fourth UA list
+# that filed ClaudeBot (Anthropic's TRAINING crawler) under "search", six
+# lines from where this file already said otherwise, and counted every
+# UA-less client as a person; the READ EVENT — `on_document_read` hands the
+# app one row per corpus document served (tier, verdict, bytes, verified
+# vendor), which the tracker keeps as the ledger's `reads` table and
+# /admin/traffic reads back; `Vary: User-Agent` on the lane-split
+# responses. Load-bearing for CRASH avoidance, not just honesty:
+# lib/analytics_tracker imports `classify` and `_ledger.EVENT_FIELDS` at
+# module scope and the registration below is unconditional. `policy` is
+# None on every event until 2.8.1 ships and the rollup groups None as
+# "default" — which is why the floor does not wait for it.
 # `configure_seo` is deliberately imported AFTER this floor fires (see the
 # floors block) so a stale environment gets the floor's diagnosis instead of
 # a bare ImportError.
-LLMS_PKG_FLOOR = (2, 7, 1)
+LLMS_PKG_FLOOR = (2, 8, 0)
 
 # THE FORK POINT — claim this app's network identity before any
 # hub-facing module imports. Every module that names this app
@@ -742,6 +757,17 @@ add_llms_routes(app, LLMSConfig(
     panel=True,
     rate_limit_per_minute=_rate_ceiling(),
 ))
+
+# The ledger row (dimll 2.8.0): the package emits one event per corpus
+# document it serves and does no I/O with it; the tracker keeps it as the
+# `reads` table next to `visits` in the same analytics file. Registered
+# ONCE — the test suite imports run.py more than once per process and
+# `on_document_read` APPENDS, so a marker on the callback's owner guards
+# the second import (the package also dedups an identical callable; belt
+# and braces). Read back by /admin/traffic and folded into the v4 rollup.
+if not getattr(tracker, "_read_hook_registered", False):
+    on_document_read(tracker.record_read)
+    tracker._read_hook_registered = True
 
 # ============================================================================
 

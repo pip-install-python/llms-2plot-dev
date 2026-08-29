@@ -212,7 +212,7 @@ reconstructed component id.
 
 ## Status
 
-`dash-improve-my-llms` **2.7.1** is on PyPI and `requirements.txt` floors
+`dash-improve-my-llms` **2.8.0** is on PyPI and `requirements.txt` floors
 there. The `LLMS_HAS_27` capability block that let this app boot on either
 release is gone — collapsed to a plain import, which was its stated design
 promise.

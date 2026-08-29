@@ -137,7 +137,7 @@ def test_prerender_rides_the_generic_lane_not_a_ua_gate(client):
             f"{path}: the prerender div carries `hidden` again — "
             "visibility-respecting consumers are back to reading "
             "'Loading...'; the floor first moved (to 2.6.1) for exactly "
-            "this, and sits at >=2.7.1 now"
+            "this, and sits at >=2.8.0 now"
         )
         assert 'data-dimll-prerender="1">document.getElementById' in html, (
             f"{path}: the marked synchronous hide script is missing — "
@@ -147,7 +147,7 @@ def test_prerender_rides_the_generic_lane_not_a_ua_gate(client):
 
 
 def test_prerender_single_h1_and_deduped_footer_llms_links(client, page_paths):
-    """What the >=2.7.1 floor buys, pinned from the app's side, EVERY page.
+    """What the >=2.7.0 rung buys, pinned from the app's side, EVERY page.
 
     Below dimll 2.7.0 every page served TWO h1s to a generic client — the
     injected prerender header plus the doc body's own markdown H1, a

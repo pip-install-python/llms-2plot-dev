@@ -105,7 +105,7 @@ jobs:
         # Every backend gets a run on the FLEET Python — decided by
         # evidence, not preference: 3.14 ran the template's full suite and
         # its docker boot/battery green before it became the main
-        # (2026-08-25), with dash 4.4.1, dash-improve-my-llms >=2.7.1 and
+        # (2026-08-25), with dash 4.4.1, dash-improve-my-llms >=2.8.0 and
         # cryptography >=50 all importing. It is also what the production
         # image serves (Dockerfile FROM tag, same minor —
         # tests/test_python_version.py pins the two together), which the old
@@ -158,7 +158,7 @@ jobs:
           if [ "${{ matrix.backend }}" != "flask" ]; then
             pip install "dash[${{ matrix.backend }}]" httpx
             # The backend extra from PyPI, same floor as requirements.txt.
-            pip install "dash-improve-my-llms[${{ matrix.backend }}]>=2.7.1"
+            pip install "dash-improve-my-llms[${{ matrix.backend }}]>=2.8.0"
           fi
           pip install pytest pytest-cov
           # An explicit matrix pin overrides requirements.txt, to prove the
@@ -178,11 +178,11 @@ jobs:
 
           # 4.4 floor: 4.3.0's FastAPI backend 500s on every non-root URL.
           assert parts(dash.__version__)[:2] >= (4, 4), dash.__version__
-          # 2.7.1 is this app's floor. 2.7.0 is what it cannot START without
-          # (configure_geo, the panel, per-vendor policy and the rate ceiling
-          # are all called unconditionally); 2.7.1 is the standards
-          # fast-follow the fleet floors on so the round happens once.
-          assert parts(pkg.__version__) >= (2, 7, 1), pkg.__version__
+          # 2.8.0 is this app's floor: lib/analytics_tracker imports
+          # `classify` / `_ledger.EVENT_FIELDS` at module scope and run.py
+          # calls `on_document_read` unconditionally, so anything lower is
+          # an ImportError at boot, not a degraded feature.
+          assert parts(pkg.__version__) >= (2, 8, 0), pkg.__version__
           # 21.x carried two request-smuggling CVEs (CVE-2024-6827,
           # CVE-2024-1135). markdown2dash's spurious <22 pin must not win.
           assert parts(gunicorn.__version__)[:2] >= (23, 0), gunicorn.__version__
@@ -259,7 +259,7 @@ jobs:
 
           v = version('dash-improve-my-llms')
           print('dash-improve-my-llms', v)
-          assert parts(v) >= (2, 7, 1), f'expected >=2.7.1 (geo guardrail, panel, vendor policy, discovery relations), image has {v}'
+          assert parts(v) >= (2, 8, 0), f'expected >=2.8.0 (one classifier, the read event, geo guardrail, panel, vendor policy), image has {v}'
 
           # markdown2dash installs with --no-deps to dodge its gunicorn<22
           # pin; this assert is what proves the dodge kept working. 21.x

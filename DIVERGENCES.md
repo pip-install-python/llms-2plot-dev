@@ -58,7 +58,12 @@ this fork's signal that no live target is configured yet; the
 build-match wait and the whole verify job skip with a notice. The
 guard stays. (Live status, 2026-08-26: the variable is still unset
 while the site is live — a repo-settings change for the owner, not a
-code divergence.)
+code divergence.) Since the 1.6.35 promote round the same guard is a
+SECOND conjunct on `verify`'s `if`, after the item's required
+`needs.deploy.result == 'success'`; `tests/test_cd_promotes_release.py`
+is therefore PORTED, not byte-copied — it asserts that deploy-success is
+required and that no `needs.deploy.result !=` chain creeps back, rather
+than the template's exact `if:` string.
 
 **5. The package-behaviour suites are additions, not replacements.**
 `tests/test_geo_guardrail.py`, `test_operator_panel.py`,
@@ -96,4 +101,44 @@ is EMPTY on purpose — drift is never fenced, because the fan-out is
 how drift gets fixed.
 
 ```yaml byte-owned
+```
+
+## Posture
+
+What this host ANSWERS, as measured — never as intended. The hub's F4
+battery seeded these per-host postures from its own table, which is a
+copy of a measurement somebody took once; this block homes them in the
+repo that can keep them true, and the hub reads it instead.
+
+All keys optional. An EMPTY block means "the template defaults" —
+present, so the absence is a statement. `tests/test_claude_kit.py`
+validates the shape (and holds `runtime:` against render.yaml, where the
+repo declares one); nothing validates the numbers but a probe, so
+re-measure when you change what this host serves:
+
+    ai_bots   the status an AI-crawler UA receives per path, measured
+              with a real vendor UA (ClaudeBot, GPTBot — NOT a UA-less
+              curl, which is classified separately). A blocked vendor
+              gets 403 on the browser document while the agent surfaces
+              stay open — that asymmetry is the posture, and it is
+              invisible from a browser.
+    healthz   `full` (the fleet payload: app, backend, build, geo,
+              python, …) or `minimal` (a deliberately reduced body).
+    runtime   `docker` or `python` — the Render service runtime, which
+              decides whether PYTHON_VERSION is required or forbidden
+              (sync spec item 5).
+    deploy    `release-branch` — Render deploys `release`, which only
+              CD writes after a green matrix (1.6.35, sync item 13);
+              `build` on /healthz is HEAD of `release`, and `main`
+              ahead of it is an uncertified push pending, never drift
+              and never a hand deploy. ABSENT reads as `main`.
+
+Measured on llms.2plot.dev, 2026-08-29, build ae1dce6 — GPTBot UA for
+the `ai_bots` row, a browser UA for the `/healthz` body:
+
+```yaml posture
+ai_bots: {"/": 403, "/llms.txt": 200, "/healthz": 403}
+healthz: full
+runtime: python
+deploy: release-branch
 ```

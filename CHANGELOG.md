@@ -5,6 +5,84 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [llms-2plot-dev 1.2.0] - 2026-08-29
+
+**Consumed `SYNC-1.6.22-1.6.35` items 12 and 13 at
+dash-documentation-boilerplate 1.6.35 (`4c63992`).** The ledger round and
+the release-branch round. Both items are contract-class: ported into this
+fork's shape, not byte-copied. Per-item dispositions are in the sync report.
+
+### Added
+
+- **`/admin/traffic`** — this host's own crawler ledger, behind the control
+  board's exact gate (fails CLOSED without Clerk, for the same reason).
+  Vendor × day, vendor → tier for a picked day, top paths per vendor, and
+  the v3 headline numbers for the same day so the two accountings can be
+  read side by side. Plain tables, no charts, no interval callback: a
+  14 × 40 table of strings is about a millisecond, five charts were ten
+  seconds (fleet fact 18).
+- **The read table.** `dash-improve-my-llms` 2.8.0 emits one event per
+  corpus document it serves (`on_document_read`) and does no I/O with it;
+  `run.py` registers `AnalyticsTracker.record_read` once, which keeps the
+  row as a `reads` table in the SAME analytics file — same buffer, lock,
+  flush cadence and retention as `visits`, with `client_ip` dropped unless
+  `ANALYTICS_KEEP_CLIENT_IP=1`. `reads` is JOINED by the rollup, never
+  summed into `human_hits` / `bot_hits` / `pages`.
+- **Rollup v4**, additive and present only on a day with reads:
+  `vendors[]` (one row per vendor key × verified × policy, with per-tier
+  counts and bytes, null key kept as the unverifiable bulk) and `reads`.
+  Every v3 key is byte-identical; the reporter POSTs what `daily_rollup`
+  returns and is unchanged.
+- **CD promotes `main` → `release`.** `.github/workflows/cd.yml`'s `deploy`
+  job now fast-forwards `release` to the run's own sha after the matrix is
+  green, and Render watches `release` (`render.yaml`). `needs: [test]` is
+  the whole gate, so `release` cannot receive an uncertified commit by
+  construction. `tests/test_cd_promotes_release.py` pins the structure.
+- **A `posture` fence in `DIVERGENCES.md`** — measured, not intended:
+  `ai_bots`, `healthz: full`, `runtime: python`, `deploy: release-branch`.
+
+### Changed
+
+- **`human_hits` DROPS and `bot_hits` RISES from this release.** UA-less
+  and library clients (`httpx`, `Go-http-client`, `node-fetch`, an empty
+  User-Agent) move from the human lane to the crawler lane, because
+  `classify()` puts them there and this app no longer disagrees with it.
+  The hub's day-over-day view will show a step on the adoption date. That
+  is the number becoming true, not a regression.
+- **There is ONE classifier.** `lib/analytics_tracker.py` delegated
+  `is_bot` and `detect_bot_type` to `dash_improve_my_llms.classify()` and
+  now ends with ZERO User-Agent strings. Its own lists had filed ClaudeBot
+  — Anthropic's TRAINING crawler — under "search", still named the retired
+  `anthropic-ai` / `claude-web` tokens, and knew nothing of `bytespider` or
+  `Claude-User`. The names and signatures are kept for callers. Crawler
+  rows gain `vendor_key`, `vendor_class`, `verified`, `lane`; human rows
+  are byte-identical to before, and the `INTERNAL_UA_TOKEN` drop still
+  happens FIRST.
+- **The floor moves to `dash-improve-my-llms>=2.8.0`** in every encoding:
+  `requirements.txt` (four lines), `run.py`'s `LLMS_PKG_FLOOR`, and CI's
+  install line plus both version asserts. Not a degradable feature —
+  `lib/analytics_tracker` imports `classify` and `_ledger.EVENT_FIELDS` at
+  module scope.
+- **`verify` runs only on `needs.deploy.result == 'success'`.** The old
+  `always() && != 'cancelled' && != 'skipped'` admitted `failure`, so a
+  failed promote could still be followed by a green verify of the
+  PREVIOUS build. Verify's first step now also asserts `/healthz` build ==
+  this run's sha itself. This fork's `SITE_URL` guard (DIVERGENCES.md 4)
+  is kept as a second conjunct.
+
+### Removed
+
+- **The Render deploy-hook secret**, and every trace of its name from
+  `cd.yml`. A push to `main` is no longer a deploy; it is a candidate.
+
+### Fixed
+
+- **`tests/test_proxy_scheme.py` sends `BROWSER_UA`.** At the 2.8.0 floor
+  an absent User-Agent is the crawler lane, so the UA-less probe received
+  the crawler document — which carries no `twitter:url` — and failed on
+  "no tag" without saying anything about the forwarded scheme. Either lane
+  can be the one you did not mean to test.
+
 ## [llms-2plot-dev 1.1.0] - 2026-08-27
 
 **Kit adoption — consumed `SYNC-1.6.10-1.6.16`, `SYNC-1.6.17-1.6.21` and

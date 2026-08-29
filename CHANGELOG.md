@@ -41,6 +41,25 @@ fork's shape, not byte-copied. Per-item dispositions are in the sync report.
 - **A `posture` fence in `DIVERGENCES.md`** — measured, not intended:
   `ai_bots`, `healthz: full`, `runtime: python`, `deploy: release-branch`.
 
+### Known issue
+
+- **This host's Render service does not auto-deploy from a branch, so
+  production is frozen until the owner switches the dashboard.** The
+  deploy hook this release removed was this service's ONLY deploy
+  trigger: `5c73a53` reached `main` at 17:43:00Z and `release` at
+  17:45:24Z, and forty minutes later `/healthz` still served `ae1dce6`,
+  where the previous deploy had been live within six minutes. CD run
+  33266359801 is red for exactly this — its promote step succeeded and
+  its build-match wait timed out. Remedy (owner, Render dashboard, not a
+  code change): Branch = `release` AND Auto-Deploy ON. Recorded as
+  `DIVERGENCES.md` 7.
+- On the same run, item 13's `verify` fix proved itself: the job was
+  **skipped** rather than run. Under the previous
+  `always() && != 'cancelled' && != 'skipped'` gate it would have run
+  after the failed deploy and reported GREEN against `ae1dce6` — the
+  previous build. That is the defect the gate change exists to prevent,
+  observed here on the first run that could exhibit it.
+
 ### Changed
 
 - **`human_hits` DROPS and `bot_hits` RISES from this release.** UA-less

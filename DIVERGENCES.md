@@ -56,9 +56,10 @@ that inherits it verbatim polls SOMEBODY ELSE'S `/healthz` for
 fifteen minutes and reports red on day one. An empty `SITE_URL` is
 this fork's signal that no live target is configured yet; the
 build-match wait and the whole verify job skip with a notice. The
-guard stays. (Live status, 2026-08-26: the variable is still unset
-while the site is live — a repo-settings change for the owner, not a
-code divergence.) Since the 1.6.35 promote round the same guard is a
+guard stays. (Live status CORRECTED 2026-08-29: the variable IS
+now set — run 33266359801's "Say plainly that the live half is dormant"
+step SKIPPED, which is `env.SITE_URL != ''` measured from inside the
+workflow. The 2026-08-26 note that it was still unset is retired.) Since the 1.6.35 promote round the same guard is a
 SECOND conjunct on `verify`'s `if`, after the item's required
 `needs.deploy.result == 'success'`; `tests/test_cd_promotes_release.py`
 is therefore PORTED, not byte-copied — it asserts that deploy-success is
@@ -78,6 +79,28 @@ them; a sync adding template tests does not collide with these.
 soak that gated the 2.7.0 tag), `PHASE1-REPORT.md` (this fork's build
 report) and `DEVELOPMENT-LOG.md` (its running log). They are records,
 not machinery — a sync should neither restore nor remove them.
+
+**7. This host's Render service does not auto-deploy from a branch.**
+FOUND 2026-08-29 by sync item 13's first promoted run (33266359801),
+and the reason that run went red: with the deploy-hook POST removed,
+`5c73a53` was pushed to `main` at 17:43:00Z and fast-forwarded onto a
+newly created `release` at 17:45:24Z, and forty minutes later
+`/healthz` still served `ae1dce6` — while the PREVIOUS deploy had been
+live within six minutes of its push. Render reacted to neither branch,
+so the deploy hook was this host's ONLY deploy trigger and autoDeploy
+is off on the service. Item 13 assumes the opposite ("autoDeploy stays
+unset/on — it is the mechanism"), which is true of the template and is
+NOT true here. `render.yaml` correctly says `branch: release`, but this
+service is evidently not Blueprint-managed, so that line is
+documentation and the dashboard is the switch.
+
+OWNER STEP, not a code change and not doable from a session: in the
+Render dashboard set Branch = `release` AND turn Auto-Deploy ON. Until
+both are set, CD's build-match wait will time out on every run and
+production stays frozen at the last hook-deployed build. This entry is
+a record of the host's state, not a divergence from the template's
+code — delete it once the dashboard is switched and a promoted run
+goes green.
 
 ## Byte-owned paths
 

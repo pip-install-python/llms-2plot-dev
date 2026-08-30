@@ -2,7 +2,7 @@ from pathlib import Path
 
 import frontmatter
 import dash_mantine_components as dmc
-from dash import dcc, register_page
+from dash import register_page
 
 from markdown2dash import Admonition, Divider, Image, create_parser
 

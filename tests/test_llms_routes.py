@@ -88,7 +88,6 @@ def test_robots_artifact_fingerprint(client):
     assert rule("Claude-SearchBot") == "Allow: /", "pre-2.3.3 artifact"
 
 
-
 def test_training_crawlers_are_not_disallowed_in_robots(client):
     """Round 3.4 (2026-08-30): the training wall is retired, so robots.txt
     must not carry `Disallow: /` for the training vendors.
@@ -110,6 +109,7 @@ def test_training_crawlers_are_not_disallowed_in_robots(client):
             f"{agent} is disallowed again — the round-3.4 flip has been "
             "reverted, or block_ai_training is back to True"
         )
+
 
 def test_sitemap_lists_every_page_on_this_host(client, page_paths):
     body = client.get("/sitemap.xml").text

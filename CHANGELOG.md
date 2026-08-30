@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [llms-2plot-dev 1.3.0] - 2026-08-30
+
+**Round 3.4, the posture flip — consumed as sync item 15, with
+boilerplate.2plot.dev as the other canary.**
+
+### Changed
+
+- **The AI-training wall is retired** (owner decision, 2026-08-30).
+  `run.py` sets `RobotsConfig(block_ai_training=False)`. It stood while a
+  refused read was the only thing this site could say about a training
+  crawler; since the 2.8.0 ledger round every read is RECORDED and
+  reconcilable — vendor, tier, verdict, bytes, verified — and the hub's
+  Ledger tab agrees with this host's own count (llms 52 = 52). A wall that
+  refuses the read also refuses the evidence. Per-vendor block/meter
+  through the callable `vendor_policy` seam is the instrument now: aimed,
+  live, revocable per request, which a blanket bucket never was.
+  Claude-User, Claude-SearchBot, ChatGPT-User, OAI-SearchBot and
+  PerplexityBot were never in the training bucket and are unaffected.
+- **In-process, both real UAs (ClaudeBot, GPTBot), before → after:**
+  `/` 403 → 200 (13,778 B crawler document) · `/llms.txt` 200 → 200 ·
+  `/healthz` 403 → 200. On the wire at 14:09Z the pre-flip triple was
+  identical to the in-process one, which means every 403 this host serves
+  is the APP's — no separate edge wall has been observed here.
+- **Three robots.txt fingerprint checks became posture checks**
+  (`tests/test_llms_routes.py`, `scripts/network_smoke.py`,
+  `scripts/smoke_live.py`). `ClaudeBot -> Disallow: /` was asserted as
+  proof the running artifact was the intended package; it was really a
+  statement of policy, and policy changed. The vendor SPLIT still
+  fingerprints the package (OAI-SearchBot, Claude-User, Claude-SearchBot
+  all `Allow: /`), and ClaudeBot/GPTBot/CCBot are now asserted NOT to
+  carry `Disallow: /`.
+- **`tests/test_vendor_policy.py`'s default-posture pin now asserts 200**
+  where it asserted 403, and `tests/test_showcase.py` asserts the panel
+  shows the served document rather than a 403 — the showcase exists to
+  show the truth about this host, so it moves with the posture.
+- **The `DIVERGENCES.md` posture fence's `ai_bots` row is INTERIM**,
+  dated 2026-08-30 14:09Z and still reading `403/200/403`, because the
+  fence records what the wire answers and the flip is not deployed. It
+  carries the before, the in-process after, and the expected wire reading.
+
 ## [llms-2plot-dev 1.2.0] - 2026-08-29
 
 **Consumed `SYNC-1.6.22-1.6.35` items 12 and 13 at

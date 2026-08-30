@@ -66,9 +66,16 @@ def test_robots_artifact_fingerprint(client):
 
     - 2.3.2: `OAI-SearchBot -> Allow` (ChatGPT search's crawler; pre-fix
       builds disallowed it).
-    - 2.3.3: `ClaudeBot -> Disallow` (the actual *training* crawler, moved to
-      the training bucket) while `Claude-User` and `Claude-SearchBot` — the
-      user-triggered and search fetchers — are allowed.
+    - 2.3.3: `Claude-User` and `Claude-SearchBot` — the user-triggered and
+      search fetchers — are allowed, distinct from ClaudeBot.
+
+    ClaudeBot's own line is NO LONGER a package fingerprint. It read
+    `Disallow: /` only because this host set `block_ai_training=True`;
+    since the round-3.4 posture flip (2026-08-30) the wall is retired, so
+    that line is POLICY, not artifact, and it is asserted as posture below
+    instead — the one shape-independent claim being that it is not a
+    `Disallow`. The vendor SPLIT is what fingerprints the package, and the
+    three lines above still carry it.
     """
     lines = client.get("/robots.txt").text.splitlines()
 
@@ -77,10 +84,32 @@ def test_robots_artifact_fingerprint(client):
         return lines[idx + 1]
 
     assert rule("OAI-SearchBot") == "Allow: /", "pre-2.3.2 artifact"
-    assert rule("ClaudeBot") == "Disallow: /", "pre-2.3.3 artifact"
     assert rule("Claude-User") == "Allow: /", "pre-2.3.3 artifact"
     assert rule("Claude-SearchBot") == "Allow: /", "pre-2.3.3 artifact"
 
+
+
+def test_training_crawlers_are_not_disallowed_in_robots(client):
+    """Round 3.4 (2026-08-30): the training wall is retired, so robots.txt
+    must not carry `Disallow: /` for the training vendors.
+
+    Asserted as an ABSENCE, deliberately, because the allow SHAPE is
+    fork-dependent: with `vendor_policy=None` (the template) the package
+    emits no stanza for these vendors at all, while this fork passes the
+    CALLABLE `vendor_policy` seam (DIVERGENCES.md 2) and gets an explicit
+    `Allow: /`. Measured both ways on dimll 2.8.0. Both mean allowed; only
+    "not disallowed" is true of both, so that is what this pins.
+    """
+    lines = [ln.strip() for ln in client.get("/robots.txt").text.splitlines()]
+
+    for agent in ("ClaudeBot", "GPTBot", "CCBot"):
+        marker = f"User-agent: {agent}"
+        if marker not in lines:
+            continue  # no stanza at all is the template's allow shape
+        assert lines[lines.index(marker) + 1] != "Disallow: /", (
+            f"{agent} is disallowed again — the round-3.4 flip has been "
+            "reverted, or block_ai_training is back to True"
+        )
 
 def test_sitemap_lists_every_page_on_this_host(client, page_paths):
     body = client.get("/sitemap.xml").text

@@ -157,8 +157,29 @@ re-measure when you change what this host serves:
               ahead of it is an uncertified push pending, never drift
               and never a hand deploy. ABSENT reads as `main`.
 
-Measured on llms.2plot.dev, 2026-08-29, build ae1dce6 — GPTBot UA for
-the `ai_bots` row, a browser UA for the `/healthz` body:
+`ai_bots` is INTERIM and dated below. Round 3.4 (owner decision,
+2026-08-30) retired this host's training wall in `run.py`
+(`block_ai_training=False`), and the fence records what the WIRE answers,
+not what the app intends — so it keeps the pre-flip reading until the
+flip is deployed and re-probed. History, so the next reading can be
+compared against something:
+
+  - 2026-08-29, build ae1dce6, wall UP: `/` 403 · `/llms.txt` 200 ·
+    `/healthz` 403, identically for ClaudeBot and GPTBot.
+  - 2026-08-30 14:09Z, still ae1dce6/0081f65 on the wire, wall UP:
+    the same triple, both UAs, and IN-PROCESS at the same commit the
+    same triple again. Edge and app AGREE, which means every 403
+    measured on this host is the APP's wall. No separate Cloudflare
+    wall has been observed here; whether a zone rule exists at all is
+    an open question for the owner, not something this fence can answer.
+  - 2026-08-30, in-process WITH the flip applied: `/` 200 (13,778 B
+    crawler document) · `/llms.txt` 200 · `/healthz` 200, both UAs.
+    Expected on the wire after deploy; the seat re-probes and this
+    block is re-dated to 200/200/200 then.
+
+Measured on llms.2plot.dev, 2026-08-30 14:09Z, build 0081f65, with the
+real ClaudeBot and GPTBot UAs for the `ai_bots` row and a browser UA for
+the `/healthz` body:
 
 ```yaml posture
 ai_bots: {"/": 403, "/llms.txt": 200, "/healthz": 403}

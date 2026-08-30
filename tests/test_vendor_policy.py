@@ -55,14 +55,23 @@ def _ua_for(vendor_key: str) -> str:
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("path", PAGE_SURFACES)
-def test_training_crawlers_are_blocked_on_pages(client, path):
-    """The 2.7.0 contract change, verified on a real app.
+def test_training_crawlers_read_the_pages(client, path):
+    """ROUND 3.4, 2026-08-30: the blanket training wall is retired.
 
-    ClaudeBot classifies `training` from 2.7.0 on — robots.txt was the
-    published promise all along (P1), and now the middleware keeps it.
+    This pin used to assert 403 on both UAs, and that was the 2.7.0
+    contract: ClaudeBot classifies `training`, robots.txt published the
+    wall, and the middleware kept it. The owner retired the wall once the
+    2.8.0 ledger made every read recordable and reconcilable — a wall that
+    refuses the read also refuses the evidence. Per-vendor block/meter
+    through `vendor_policy` is the instrument now, and the tests below
+    still pin that it BITES; what is gone is the blanket bucket.
+
+    Kept as an assertion rather than deleted: if this goes back to 403,
+    something re-enabled `block_ai_training` and the flip was reverted by
+    accident rather than by decision.
     """
-    assert client.get(path, user_agent=TRAINING_UA).status == 403
-    assert client.get(path, user_agent=GPTBOT_UA).status == 403
+    assert client.get(path, user_agent=TRAINING_UA).status == 200
+    assert client.get(path, user_agent=GPTBOT_UA).status == 200
 
 
 @pytest.mark.parametrize("path", DOC_SURFACES)

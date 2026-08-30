@@ -262,14 +262,21 @@ def test_showcase_a_renders_for_every_audience(showcase_modules, user_agent):
     assert rendered is not None, f"no rendered panel for {user_agent}"
 
 
-def test_showcase_a_shows_the_403_for_a_blocked_crawler(showcase_modules):
-    """ClaudeBot classifies `training` from 2.7.0 on — the W1 contract
-    change — so a blocked training crawler's panel shows the 403."""
+def test_showcase_a_shows_the_served_document_for_a_training_crawler(showcase_modules):
+    """ROUND 3.4, 2026-08-30: the panel shows what ClaudeBot actually gets.
+
+    This asserted `403` while the training wall stood. The wall is retired,
+    so the honest panel now shows the served document — and the showcase
+    exists precisely to show the truth about this host, so it must move
+    with the posture rather than keep teaching the old one.
+    """
     verdict, rendered, _source, _headers = showcase_modules["crawler"]._show(
         "/", "ClaudeBot/1.0")
-    assert "403" in str(rendered), (
-        "a blocked training crawler's panel does not show the 403 it would get"
+    assert "403" not in str(rendered), (
+        "the panel still shows a 403 for a training crawler — the round-3.4 "
+        "flip is not reflected here, or block_ai_training is back to True"
     )
+    assert rendered is not None and str(rendered).strip(), "no panel rendered"
 
 
 @pytest.mark.parametrize("args", [

@@ -240,8 +240,14 @@ def satellite_checks(base: str) -> None:
     def robots_artifact_fingerprint():
         # pip metadata is invisible from outside, so the robots.txt crawler
         # split is how a live host is proven to run the intended package:
-        # 2.3.2 allowed OAI-SearchBot; 2.3.3 moved ClaudeBot (the training
-        # crawler) to Disallow while allowing Claude-User / Claude-SearchBot.
+        # 2.3.2 allowed OAI-SearchBot; 2.3.3 split Claude-User /
+        # Claude-SearchBot (user-triggered and search) away from ClaudeBot.
+        #
+        # ClaudeBot's own line is POLICY, not artifact, since the round-3.4
+        # flip (2026-08-30) retired the training wall — it is checked as a
+        # posture below instead. The allow SHAPE is fork-dependent (no
+        # stanza with vendor_policy=None, `Allow: /` with the callable
+        # seam), so the portable claim is "not Disallow".
         status, _, text = get("/robots.txt")
         expect(status == 200, f"/robots.txt {status}")
         lines = [ln.strip() for ln in text.splitlines()]
@@ -253,13 +259,21 @@ def satellite_checks(base: str) -> None:
 
         for agent, expected, since in (
             ("OAI-SearchBot", "Allow: /", "2.3.2"),
-            ("ClaudeBot", "Disallow: /", "2.3.3"),
             ("Claude-User", "Allow: /", "2.3.3"),
             ("Claude-SearchBot", "Allow: /", "2.3.3"),
         ):
             got = rule(agent)
             expect(got == expected,
                    f"{agent} -> {got!r}, expected {expected!r}: pre-{since} artifact")
+
+        # Posture, not artifact: the training vendors must not be walled.
+        for agent in ("ClaudeBot", "GPTBot", "CCBot"):
+            marker = f"User-agent: {agent}"
+            if marker not in lines:
+                continue  # no stanza at all is the other allow shape
+            got = lines[lines.index(marker) + 1]
+            expect(got != "Disallow: /",
+                   f"{agent} -> {got!r}: the round-3.4 flip is not live here")
         expect(any(ln.startswith("Sitemap:") for ln in lines), "Sitemap line missing")
 
     def sitemap_absolute_and_on_this_host():

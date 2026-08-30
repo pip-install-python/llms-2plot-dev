@@ -382,14 +382,26 @@ from lib import policy_store as _policy_store  # noqa: E402
 
 _policy_store.persistence_warning()
 
-# Configure bot management policies — the balanced default this project
-# documents: block training crawlers, allow AI search citations and
-# traditional search. As of dash-improve-my-llms 2.3.3 the buckets are
-# correct per vendor: ClaudeBot (Anthropic's *training* crawler) sits in the
-# training block, while the user-triggered and search fetchers Claude-User /
-# Claude-SearchBot are allowed alongside ChatGPT-User / OAI-SearchBot /
-# PerplexityBot. With block_ai_training=False the training bucket is never
-# emitted at all, which silently allows training — not "balanced".
+# Configure bot management policies. THE TRAINING WALL IS RETIRED (owner
+# decision, 2026-08-30, round 3.4 — this host is a canary with
+# boilerplate.2plot.dev). It stood while a blocked read was the only thing
+# this site could say about a training crawler; since the 2.8.0 ledger
+# round every read is RECORDED and reconcilable — vendor, tier, verdict,
+# bytes, verified — and the hub's Ledger tab agrees with this host's own
+# count (llms 52 = 52). A wall that refuses the read also refuses the
+# evidence. The per-vendor block/meter through `vendor_policy` below is the
+# instrument now: it is aimed, live, and revocable per request, which a
+# blanket bucket never was.
+#
+# As of dash-improve-my-llms 2.3.3 the buckets are correct per vendor:
+# ClaudeBot is Anthropic's *training* crawler, distinct from the
+# user-triggered and search fetchers Claude-User / Claude-SearchBot, which
+# were allowed throughout alongside ChatGPT-User / OAI-SearchBot /
+# PerplexityBot. Note the SHAPE of the change: with block_ai_training=False
+# the package emits NO training stanza at all, so robots.txt gains no
+# `Allow:` line for these vendors — it simply stops carrying
+# `Disallow: /` for them. Assert the absence, not an allow (the boilerplate
+# canary's correction to item 3, same day).
 #
 # 2.7.0 adds `vendor_policy=`, and this fork passes the CALLABLE form: the
 # package re-reads it on every robots.txt render AND on every middleware
@@ -398,7 +410,7 @@ _policy_store.persistence_warning()
 # describe what is served — which is what lets the seam sit live from boot
 # instead of needing a redeploy the day an override is first wanted.
 app._robots_config = RobotsConfig(
-    block_ai_training=True,       # Disallow GPTBot, ClaudeBot, CCBot, etc.
+    block_ai_training=False,      # Retired 2026-08-30: no training stanza at all
     allow_ai_search=True,         # Allow Claude-User/-SearchBot, ChatGPT-User, ...
     allow_traditional=True,       # Allow Googlebot, Bingbot, etc.
     crawl_delay=10,

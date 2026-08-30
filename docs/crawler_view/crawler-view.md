@@ -4,6 +4,7 @@ description: What Googlebot, ClaudeBot, GPTBot and PerplexityBot actually receiv
 endpoint: /audiences/web-crawlers
 package: crawler-view
 category: This package
+order: 2
 icon: tabler:robot
 lastmod: 2026-08-22
 schema_type: TechArticle
@@ -63,7 +64,7 @@ app._robots_config = RobotsConfig(
 
 Since 2.7.0 the coarse flags have a finer companion — `vendor_policy`, per
 vendor, `allow` / `block` / `meter` — and it takes a **callable**, read on
-every request. That is what the [control board](/admin/control-board) writes
+every request. That is what the control board writes
 through.
 
 ### The documentation surfaces stay open

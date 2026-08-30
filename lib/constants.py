@@ -44,6 +44,11 @@ APP_TITLE = SITE_BRAND
 # run past every platform's truncation point.
 SITE_SHORT_NAME = "Dash Improve My LLMs"
 
+# The top bar's wordmark (1.6.38). The template ships the literal
+# "Dash Docs"; this host shows its own short name, which is what the
+# header rendered before the constant existed.
+WORDMARK = SITE_SHORT_NAME
+
 # Prefixed to every per-page title (`pages/markdown.py`, `pages/home.py`), and
 # therefore NOT only a browser-tab string: Dash passes the page title straight
 # into `og:title` and `twitter:title` (dash/_pages.py `_page_meta_tags`), so
@@ -180,10 +185,78 @@ OG_IMAGE_ALT = SITE_BRAND
 # the GitHub README pointing back at the docs subdomain) is a per-package
 # checklist item, not code.
 PUBLISHER = "Pip Install Python LLC"
+
+# ONE constant for the repository. The header's GitHub icon, the footer,
+# the Resources block and JSON-LD `sameAs` all read it (1.6.38): a fork
+# sets it once. On this host it is the PACKAGE's repo, not this site's —
+# the thing a reader of these docs wants is the code they are reading
+# about, and the sync drop confirmed it: "already the package repo — keep".
+GITHUB_URL = "https://github.com/pip-install-python/dash-improve-my-llms"
+
+# DIVERGENCE from the template's `SAME_AS = [GITHUB_URL]`: this site
+# documents a PUBLISHED PyPI package, so its JSON-LD identity claims both
+# the repo and the distribution. Dropping the PyPI URL to match the
+# template would delete a true and load-bearing identity claim — the
+# docs-home ↔ package loop this site exists to close.
 SAME_AS = [
-    "https://github.com/pip-install-python/dash-improve-my-llms",
+    GITHUB_URL,
     "https://pypi.org/project/dash-improve-my-llms/",
 ]
+
+# ---------------------------------------------------------------------------
+# Navigation contract (1.6.38) — the parts of the sidebar/top bar that are
+# IDENTICAL on every host come from template code and these constants; the
+# app's own sections come from frontmatter. A fork edits THIS block and its
+# docs' frontmatter, never components/navbar.py.
+# ---------------------------------------------------------------------------
+
+# The app's own sections, in sidebar order. Every docs page declares
+# `category:` in its frontmatter; categories not listed here follow the
+# listed ones, alphabetically. Keep names short — they are sidebar titles.
+# These three are this fork's own long-standing cluster names, kept as
+# category names exactly as the drop allows.
+CATEGORY_ORDER = [
+    "This package",
+    "Reference",
+    "Showcase",
+]
+
+# Network-wide community links — identical on every host.
+DISCORD_URL = "https://discord.gg/e5s5uHWUHH"
+YOUTUBE_URL = "https://www.youtube.com/@2plotai"
+YOUTUBE_SUBSCRIBE_URL = YOUTUBE_URL + "?sub_confirmation=1"
+DMC_URL = "https://www.dash-mantine-components.com/"
+
+# The upstream project a component wraps — `{"name": ..., "url": ...}` or
+# None. This site documents a pure-Python Dash extension that wraps nothing:
+# there is no upstream JS project behind dash-improve-my-llms.
+UPSTREAM = None
+
+# Dash component packages whose props the generated /api page documents.
+# EMPTY ON PURPOSE, and it is a measurement, not an omission:
+# dash_improve_my_llms ships NO component metadata — no metadata.json, no
+# bundled .min.js, no generated component classes (checked on 2.8.0). It is
+# a library of routes, middleware and config objects, not a component
+# package, so there are no props to tabulate and /api is not registered.
+API_PACKAGES: list = []
+
+# The owner's profile — the FOOTER's GitHub link (the repo is the top bar's).
+GITHUB_PROFILE_URL = "https://github.com/pip-install-python"
+
+
+def resources() -> list:
+    """The sidebar's Resources section: THIRD-PARTY ONLY (owner, 2026-08-30).
+    `dmc` and, when a fork declares it, the upstream project. The owner's
+    own links (repo, Discord, YouTube) live in the top bar and the footer,
+    never here; no community.plotly.com; no 2plot.dev (the network is the
+    Other Apps menu)."""
+    items = [
+        {"label": "dmc", "url": DMC_URL, "icon": "ic:baseline-design-services"},
+    ]
+    if UPSTREAM:
+        items.append({"label": UPSTREAM["name"], "url": UPSTREAM["url"],
+                      "icon": UPSTREAM.get("icon", "mdi:open-in-new")})
+    return items
 
 
 def require_owned_base_url(base_url: str = BASE_URL) -> None:

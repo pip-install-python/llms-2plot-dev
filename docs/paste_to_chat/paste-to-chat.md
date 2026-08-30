@@ -4,6 +4,7 @@ description: What happens when a person pastes this site's URL into ChatGPT or C
 endpoint: /audiences/llm-context
 package: paste-to-chat
 category: This package
+order: 3
 icon: tabler:message-2-code
 lastmod: 2026-08-22
 schema_type: TechArticle

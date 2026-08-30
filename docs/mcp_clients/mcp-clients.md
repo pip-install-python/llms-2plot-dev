@@ -4,6 +4,7 @@ description: How an MCP-speaking assistant mounts this site's documentation as a
 endpoint: /audiences/mcp-clients
 package: mcp-clients
 category: This package
+order: 1
 icon: tabler:plug-connected
 lastmod: 2026-08-22
 schema_type: TechArticle

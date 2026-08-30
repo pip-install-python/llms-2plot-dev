@@ -4,6 +4,7 @@ description: Build a RobotsConfig with switches and watch the robots.txt it woul
 endpoint: /showcase/robots-sandbox
 package: robots-sandbox
 category: Showcase
+order: 1
 icon: tabler:adjustments-alt
 lastmod: 2026-08-22
 schema_type: TechArticle

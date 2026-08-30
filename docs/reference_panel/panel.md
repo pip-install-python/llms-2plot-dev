@@ -4,6 +4,7 @@ description: A read-only, token-gated page showing the live effective policy of 
 endpoint: /reference/panel
 package: panel
 category: Reference
+order: 5
 icon: tabler:dashboard
 lastmod: 2026-08-22
 schema_type: TechArticle
@@ -99,7 +100,7 @@ state and you change one worker; mutate a file every worker re-reads and you
 change all of them.
 
 This site runs that pattern: a flock-guarded JSON store on a mounted disk,
-written by an admin-gated [control board](/admin/control-board) whose every
+written by an admin-gated control board whose every
 write callback re-checks the gate server-side, and read back through the
 seams on every request.
 

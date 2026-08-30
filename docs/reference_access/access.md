@@ -4,6 +4,7 @@ description: Gate a page and its machine twin independently — the four verdict
 endpoint: /reference/access
 package: access
 category: Reference
+order: 3
 icon: tabler:lock-access
 lastmod: 2026-08-22
 schema_type: TechArticle

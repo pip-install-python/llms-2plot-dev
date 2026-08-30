@@ -103,6 +103,36 @@ this host is a worked example. Expect the FIRST promoted run after
 adoption to go red on the wait until the dashboard is switched, and read
 that red as the owner step outstanding, not as a defect in cd.yml.
 
+**8. Two item-16 files are not byte-identical to the template's, and
+both seams are the TEMPLATE's, not this fork's.** 1.6.38 asks each fork
+to report which of the eight navigation files came out byte-identical,
+as the evidence for reclassing them as cargo next round. Nine of the
+eleven files this fork took are identical (`components/navbar.py`,
+`footer.py`, `appshell.py`, `pages/changelog.py`, `pages/api.py`,
+`lib/api_reference.py`, `lib/aside.py`, `lib/network_directory.py`,
+`tests/test_excluded_links_hidden.py`). The two that differ:
+
+  - `components/header.py` — ONE line: `get_asset_url('ddb.png')`. The
+    template hardcodes its own logo filename in the component, so the
+    file still carries fork identity and cannot be cargo until that
+    moves to a constant beside `WORDMARK`. This fork serves
+    `llms.png`.
+  - `tests/test_nav_contract.py` — the aside pin names
+    `/backend-comparison`, a template tutorial page this fork DELETED at
+    fork time (divergence 1). Two of this site's own `.. toc::` pages
+    stand in. Cargo-eligible once the pin picks its paths from the
+    registry rather than naming them.
+
+Recorded so the reclass has the evidence rather than a claim, and so a
+later sync does not read either line as drift.
+
+**9. `SAME_AS` carries the PyPI distribution as well as the repo.** The
+template's 1.6.38 constant is `SAME_AS = [GITHUB_URL]`. This site
+documents a published package, so its JSON-LD identity claims both the
+repo and `https://pypi.org/project/dash-improve-my-llms/` — the
+docs-home ↔ package loop this site exists to close. `GITHUB_URL` itself
+points at the PACKAGE's repo, not this site's, for the same reason.
+
 ## Byte-owned paths
 
 Paths this fork owns byte-for-byte. The F3b fan-out never overwrites

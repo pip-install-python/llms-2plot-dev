@@ -5,6 +5,68 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [llms-2plot-dev 1.4.0] - 2026-08-30
+
+**Sync items 16 and 17 — the navigation contract and the battery's lane.**
+
+### Added
+
+- **`/changelog`** — this file as a Timeline, linked under Home in the
+  sidebar and from the footer, and served as its own `llms.txt`.
+- **A footer** — © Pip Install Python LLC, the owner's GitHub profile,
+  Discord and YouTube, every icon labelled.
+- **An Admin section in the sidebar, visible to the OWNER.** Both admin
+  pages (`/admin/control-board`, `/admin/traffic`) were previously
+  hidden from everyone including the owner by a blanket `/admin/*` path
+  filter; they are now listed for `is_admin_user()` and for nobody else —
+  the anonymous tree carries no `/admin/` href at all.
+- **An `Other Apps` menu in the top bar**, built from
+  `network_directory.PRIMARY` rather than a hand-typed list.
+- **`lib/aside.py`** — the aside column collapses on pages with no
+  `.. toc::`, so `/changelog` and `/` render full width.
+
+### Changed
+
+- **The sidebar is generated from frontmatter**, not from three
+  hand-typed link clusters in `components/navbar.py`. Every page already
+  declared `category:`; the navbar simply ignored it. Each page now also
+  declares `order:`. **`/audiences/web-crawlers` is listed once** — it
+  appeared twice, as "Web Crawlers" under This package and as
+  "A · What the crawler sees" under Showcase.
+- **The sidebar's `Pip Components` and `Other Apps I've built` sections
+  are gone** — the network is listed once, in the top bar's menu.
+  `Resources` is third-party only: `dmc`. No `community.plotly.com`, no
+  `2plot.dev`.
+- **`pages/home.py` renders through markdown2dash**, not `dcc.Markdown`,
+  so home's headings, tables and code fences match every docs page.
+- **`/admin/traffic` uses `dmc.DatePickerInput`** instead of
+  `dcc.Dropdown`, and gains a **People** section — the day's human hits,
+  visitors, sessions and median session — above the crawler tables, with
+  the line that humans never enter the read ledger.
+- **Mobile fit**: code blocks inside a List item, Blockquote or Timeline
+  scroll in their own box instead of widening the document; the rules are
+  in `main.css` against public Mantine class names, never per page.
+- **`/api` is NOT registered here, and that is a measurement.**
+  `dash_improve_my_llms` ships no component metadata — no
+  `metadata.json`, no bundled JS, no generated component classes
+  (checked on 2.8.0). It is a library of routes, middleware and config
+  objects, so there are no props to tabulate. `API_PACKAGES` is `[]`.
+- **The live battery's default User-Agent names the browser lane**
+  (item 17). At dimll ≥2.8 a UA with no browser engine token is
+  crawler-lane, so `scripts/network_smoke.py`'s bare internal token made
+  every default-UA check read the prerendered crawler document. A Chrome
+  token now leads, the internal token follows it (substring match, so
+  internal-traffic exclusion still holds), and `CRAWLER_UA` is untouched.
+
+### Fixed
+
+- **Admin URLs no longer leak into the machine corpus.** Five pages
+  hyperlinked `/admin/control-board` in their prose, which put an admin
+  path in `/llms.txt`. Found by item 16's rewritten
+  `tests/test_excluded_links_hidden.py`. The prose keeps the words and
+  drops the link — the URL is useless to anyone who cannot authenticate,
+  and publishing it invited crawlers to an admin path.
+
 ## [llms-2plot-dev 1.3.0] - 2026-08-30
 
 **Round 3.4, the posture flip — consumed as sync item 15, with

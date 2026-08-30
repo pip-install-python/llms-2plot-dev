@@ -4,6 +4,7 @@ description: Install dash-improve-my-llms and mount the whole machine-facing sur
 endpoint: /getting-started
 package: getting-started
 category: Reference
+order: 1
 icon: tabler:rocket
 lastmod: 2026-08-22
 schema_type: TechArticle

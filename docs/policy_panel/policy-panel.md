@@ -4,6 +4,7 @@ description: This host's live effective policy — tiers, vendor verdicts, the h
 endpoint: /showcase/policy-panel
 package: policy-panel
 category: Showcase
+order: 2
 icon: tabler:shield-lock
 lastmod: 2026-08-22
 schema_type: TechArticle
@@ -56,7 +57,7 @@ everyone without the token) is read-only by decision: package config is per-proc
 N gunicorn workers a *mutating* panel would change one worker and lie on the
 next refresh. Routing every write through a file the workers re-read per
 request dissolves that problem — and that is what
-[the control board](/admin/control-board) does.
+the control board does.
 
 ### What "451 on every surface" means
 

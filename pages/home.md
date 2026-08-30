@@ -61,7 +61,7 @@ Discovery is the floor. Since 2.7 the package is also the layer that decides
 
 Each of those takes a **callable** as well as a static value, and the
 callable is read per request. That is the seam this site's
-[control board](/admin/control-board) writes through: flip a country on the
+control board writes through: flip a country on the
 map, and the next request from it gets 451 — in every worker, with no
 restart and no redeploy.
 

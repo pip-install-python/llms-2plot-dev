@@ -4,6 +4,7 @@ description: configure_geo — opt-in 451 on every surface for whole geographies
 endpoint: /reference/geo
 package: geo
 category: Reference
+order: 4
 icon: tabler:world-cancel
 lastmod: 2026-08-22
 schema_type: TechArticle
@@ -110,7 +111,7 @@ restart, no redeploy. That is what dissolves the multi-worker problem: mutate
 module state and you change one worker; mutate a file every worker re-reads
 and you change all of them.
 
-This site's [control board](/admin/control-board) does exactly this. Here is
+This site's control board does exactly this. Here is
 the whole store it writes through — flock-guarded, validated on write, atomic
 on replace, and fail-open on every read failure:
 

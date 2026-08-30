@@ -4,6 +4,7 @@ description: Every option on LLMSConfig, RobotsConfig and configure_seo — what
 endpoint: /reference/configuration
 package: configuration
 category: Reference
+order: 2
 icon: tabler:settings-code
 lastmod: 2026-08-22
 schema_type: TechArticle

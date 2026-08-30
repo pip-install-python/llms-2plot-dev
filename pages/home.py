@@ -4,6 +4,9 @@ import frontmatter
 import dash_mantine_components as dmc
 from dash import dcc, register_page
 
+from markdown2dash import Admonition, Divider, Image, create_parser
+
+from lib.directives.headings import patch_renderer
 from lib.constants import (
     OG_IMAGE_URL,
     PAGE_TITLE_PREFIX,
@@ -85,11 +88,10 @@ layout = dmc.Container(
     py="xl",
     children=[
         hero,
-        dcc.Markdown(
-            content,
-            style={
-                "maxWidth": "none",  # Allow Container to control width
-            }
-        )
+        # markdown2dash, NOT dcc.Markdown (contract 9, 1.6.38): the whole
+        # site renders through one pipeline, so home's headings, tables and
+        # code fences look like every docs page's. patch_renderer() also
+        # adds the inline-image renderer markdown2dash lacks.
+        *(patch_renderer(), create_parser([Admonition(), Divider(), Image()])(content))[1]
     ]
 )

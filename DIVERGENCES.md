@@ -80,27 +80,28 @@ soak that gated the 2.7.0 tag), `PHASE1-REPORT.md` (this fork's build
 report) and `DEVELOPMENT-LOG.md` (its running log). They are records,
 not machinery — a sync should neither restore nor remove them.
 
-**7. This host's Render service does not auto-deploy from a branch.**
-FOUND 2026-08-29 by sync item 13's first promoted run (33266359801),
-and the reason that run went red: with the deploy-hook POST removed,
-`5c73a53` was pushed to `main` at 17:43:00Z and fast-forwarded onto a
-newly created `release` at 17:45:24Z, and forty minutes later
-`/healthz` still served `ae1dce6` — while the PREVIOUS deploy had been
-live within six minutes of its push. Render reacted to neither branch,
-so the deploy hook was this host's ONLY deploy trigger and autoDeploy
-is off on the service. Item 13 assumes the opposite ("autoDeploy stays
-unset/on — it is the mechanism"), which is true of the template and is
-NOT true here. `render.yaml` correctly says `branch: release`, but this
-service is evidently not Blueprint-managed, so that line is
-documentation and the dashboard is the switch.
+**7. RETIRED 2026-08-29, same day — the first-promote observation, kept
+because the timing will recur on any fork adopting item 13.** When the
+promote round landed, `5c73a53` reached `main` at 17:43:00Z and was
+fast-forwarded onto a newly created `release` at 17:45:24Z, and at
+18:22:44Z `/healthz` still served `ae1dce6` — where the PREVIOUS deploy
+had been live within six minutes of its push. CD run 33266359801 went
+red on its build-match wait for exactly that, its promote step already
+green. From this session's vantage the cause was NOT decidable — the
+dashboard is not readable from here — and an earlier version of this
+entry inferred autoDeploy was off. That inference was wrong: the ops
+seat reports the owner switched the service's Branch to `release` at
+~18:00Z, and the very next run (33281935425, `0081f65`) went fully green
+in five minutes — promote, build-match wait, and verify including its
+`/healthz build == github.sha` step. Nothing in this repo's code was at
+fault and nothing needs changing.
 
-OWNER STEP, not a code change and not doable from a session: in the
-Render dashboard set Branch = `release` AND turn Auto-Deploy ON. Until
-both are set, CD's build-match wait will time out on every run and
-production stays frozen at the last hook-deployed build. This entry is
-a record of the host's state, not a divergence from the template's
-code — delete it once the dashboard is switched and a promoted run
-goes green.
+The keepable lesson: on a fork whose Render service is not
+Blueprint-managed, `render.yaml`'s `branch:` is documentation and the
+dashboard Branch field is the switch — item 13 says so in its notes, and
+this host is a worked example. Expect the FIRST promoted run after
+adoption to go red on the wait until the dashboard is switched, and read
+that red as the owner step outstanding, not as a defect in cd.yml.
 
 ## Byte-owned paths
 

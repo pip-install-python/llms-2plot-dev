@@ -41,18 +41,17 @@ fork's shape, not byte-copied. Per-item dispositions are in the sync report.
 - **A `posture` fence in `DIVERGENCES.md`** — measured, not intended:
   `ai_bots`, `healthz: full`, `runtime: python`, `deploy: release-branch`.
 
-### Known issue
+### Notes on the first promoted run
 
-- **This host's Render service does not auto-deploy from a branch, so
-  production is frozen until the owner switches the dashboard.** The
-  deploy hook this release removed was this service's ONLY deploy
-  trigger: `5c73a53` reached `main` at 17:43:00Z and `release` at
-  17:45:24Z, and forty minutes later `/healthz` still served `ae1dce6`,
-  where the previous deploy had been live within six minutes. CD run
-  33266359801 is red for exactly this — its promote step succeeded and
-  its build-match wait timed out. Remedy (owner, Render dashboard, not a
-  code change): Branch = `release` AND Auto-Deploy ON. Recorded as
-  `DIVERGENCES.md` 7.
+- **The first promoted run went red on its build-match wait, and that was
+  the owner step outstanding, not a defect.** `5c73a53` reached `main` at
+  17:43:00Z and `release` at 17:45:24Z; at 18:22:44Z `/healthz` still
+  served `ae1dce6`. This service is not Blueprint-managed, so
+  `render.yaml`'s `branch:` is documentation and the dashboard Branch
+  field is the switch — item 13 says exactly this in its notes. The owner
+  switched it at ~18:00Z and the next run (33281935425, `0081f65`) went
+  fully green in five minutes: promote, wait, and verify including its
+  `/healthz build == github.sha` step. `main == release == wire`.
 - On the same run, item 13's `verify` fix proved itself: the job was
   **skipped** rather than run. Under the previous
   `always() && != 'cancelled' && != 'skipped'` gate it would have run

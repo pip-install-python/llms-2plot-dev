@@ -51,12 +51,30 @@ def test_discovery_agrees_with_the_declared_icons(app):
 
 
 def _declared_lastmods() -> set[str]:
+    """Every date this repo DECLARES, from both sources that can stamp one.
+
+    Frontmatter `lastmod:` is one. Since 1.6.41 there is a second:
+    /changelog's lastmod is the newest dated release heading in
+    CHANGELOG.md (`pages.changelog.newest_date`). That date is declared by
+    hand in the changelog exactly as a frontmatter stamp is declared by
+    hand in a docs page — it is a real editorial act, not a build-time
+    invention, which is the only thing this pin has ever cared about.
+    Reading it from the same helper the page uses keeps the two in step;
+    hardcoding today's date here would have re-introduced the lie the pin
+    exists to catch.
+    """
     dates = set()
     for md in Path("docs").glob("**/*.md"):
         head = md.read_text().split("---")[1] if md.read_text().startswith("---") else ""
         m = re.search(r"^lastmod:\s*(\d{4}-\d{2}-\d{2})\s*$", head, re.MULTILINE)
         if m:
             dates.add(m.group(1))
+
+    from pages.changelog import newest_date
+
+    changelog_date = newest_date()
+    if changelog_date:
+        dates.add(changelog_date)
     return dates
 
 

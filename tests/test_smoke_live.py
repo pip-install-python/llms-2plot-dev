@@ -60,7 +60,7 @@ def wired(smoke, client, monkeypatch):
     the network from a unit test would make the suite depend on eleven other
     deployments being up.
     """
-    def fetch(url, user_agent=smoke.BROWSER_UA, accept=None):
+    def fetch(url, user_agent=smoke.BROWSER_UA, accept=None, method="GET"):
         if url.startswith(BASE):
             path = url[len(BASE):] or "/"
             response = client.get(path, user_agent=user_agent, accept=accept)
@@ -443,7 +443,7 @@ def test_a_cold_host_wakes_and_the_probe_requires_ok_true(smoke, monkeypatch, ca
         (200, '{"backend":"flask","ok":true}', {}),
     ]
 
-    def fetch(url, user_agent=smoke.BROWSER_UA, accept=None, retries=None, timeout=None):
+    def fetch(url, user_agent=smoke.BROWSER_UA, accept=None, retries=None, timeout=None, method="GET"):
         assert url.endswith("/healthz")
         assert retries == 1, "the wake loop is the ladder; fetch must not stack one"
         return probes.pop(0)

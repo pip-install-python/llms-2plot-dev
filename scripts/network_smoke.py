@@ -90,10 +90,15 @@ DEFAULT_BASE_URL = "http://localhost:8550"
 # has to keep working. A fork adds its own paths here in the same change that
 # marks them hidden.
 HIDDEN_DOC_PATHS = (
-    # This fork's real hidden page — pages/control_board.py calls
-    # mark_hidden() on it, so the canary above became a census.
+    # This fork's real hidden pages — pages/control_board.py and
+    # pages/traffic.py each call mark_hidden(), so the canary above became
+    # a census. It must match the REGISTERED /admin/* set exactly, which
+    # tests/test_nav_contract.py now pins against the registry: /admin
+    # itself is a redirect, not a page, and listing it here while omitting
+    # /admin/traffic meant the battery probed a path that does not exist
+    # and never probed the one added with the ledger round (1.6.34).
     "/admin/control-board/llms.txt",
-    "/admin/llms.txt",
+    "/admin/traffic/llms.txt",
 )
 
 # The hub one level up the chain. A satellite's llms.txt must name it — that

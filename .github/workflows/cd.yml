@@ -129,6 +129,16 @@ jobs:
           # GITHUB_TOKEN pushes trigger no workflows — correct: `on:` is
           # main-only, and it is Render, not Actions, that reacts to
           # `release` (render.yaml `branch: release`, autoDeploy on).
+          # Refs are a filesystem: a `release/<anything>` branch (any depth
+          # — muischeduler carried a 2026-08-01 `release/v0.1.0`) makes
+          # `release` a DIRECTORY and this push fails with "cannot lock
+          # ref". Owner step: delete or rename every release/* branch —
+          # never --force (sync item 13).
+          if git ls-remote --heads origin 'release/*' | grep -q .; then
+            echo "::error::a release/* branch exists — 'release' cannot also be a ref. Delete or rename every release/* branch (owner step, sync item 13), then re-run failed jobs."
+            git ls-remote --heads origin 'release/*'
+            exit 1
+          fi
           git push origin "HEAD:refs/heads/release"
           echo "::notice::release → ${GITHUB_SHA} (fast-forward)"
 
@@ -144,6 +154,8 @@ jobs:
         # the workflow's whole life (the old build always already passed
         # the old battery) until a new surface made the race lose; found on
         # muicharts, 2026-08-21, fleet-wide class.
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           # A bare 200 proves nothing about WHICH build answered: /healthz
           # now reports the running instance's commit (RENDER_GIT_COMMIT),
@@ -155,6 +167,7 @@ jobs:
           want="${GITHUB_SHA}"
           matched=0
           ok=0
+          checked=""
           for _ in $(seq 1 100); do
             body="$(curl -fsS "$SITE_URL/healthz" 2>/dev/null || true)"
             if [ -n "$body" ]; then
@@ -164,6 +177,21 @@ jobs:
                 [ "$matched" -ge 3 ] && break
               elif [ -z "$build" ]; then
                 ok=$((ok + 1))
+              elif [ "$build" != "$checked" ]; then
+                # Fail FAST when a LATER commit already serves (1.6.25's
+                # trap, implemented rather than described): a bot-merged PR
+                # or a following push can ship past this run, and waiting
+                # the full 25 minutes to go red hides which of the two
+                # things happened. `ahead` means the live build is a
+                # descendant of ours — our artifact is superseded and that
+                # commit's own run must certify it.
+                checked="$build"
+                rel="$(gh api "repos/${GITHUB_REPOSITORY}/compare/${want}...${build}" --jq .status 2>/dev/null || true)"
+                if [ "$rel" = "ahead" ]; then
+                  echo "::error::superseded — $build already serves and is a descendant of $want; that commit's own run must certify"
+                  exit 1
+                fi
+                echo "::notice::live build $build is ${rel:-unknown} relative to $want — still waiting for this run's build"
               fi
             fi
             sleep 15

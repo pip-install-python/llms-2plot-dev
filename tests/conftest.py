@@ -197,6 +197,24 @@ class Client:
         merged.update(headers or {})
         return self.request("POST", path, headers=merged, json=json)
 
+    def open(self, path: str, method: str = "GET", user_agent: str = BROWSER_UA,
+             accept: str = None, headers: dict | None = None) -> Response:
+        """Any method, same reconciliation as `get`/`post`.
+
+        Added for the satellite battery's `wired` fixture (1.6.41), which
+        drives `scripts/network_smoke.py` against this client and needs the
+        one non-GET the battery issues — `HEAD /healthz`, the 1.6.32 check
+        that HEAD works at all. Keeping the shim HERE rather than adapting
+        the fixture leaves tests/test_network_smoke.py byte-identical to
+        the template's, which is what the cargo reclass wants; conftest is
+        fork-owned by nature, so this is the right place for the seam.
+        """
+        merged = {"User-Agent": user_agent}
+        if accept is not None:
+            merged["Accept"] = accept
+        merged.update(headers or {})
+        return self.request(method, path, headers=merged)
+
     def request(self, method: str, path: str, headers: dict, json=None) -> Response:
         """The one place the three backends' clients are reconciled."""
         if self._kind == "werkzeug":

@@ -49,6 +49,17 @@ SITE_SHORT_NAME = "Dash Improve My LLMs"
 # header rendered before the constant existed.
 WORDMARK = SITE_SHORT_NAME
 
+# The header's mark, lifted out of components/header.py (1.6.41) so that
+# file holds no fork content: the asset under assets/, its box (an SVG
+# needs no fixed width — set only what the asset needs), the wordmark
+# colour, and the breakpoint the wordmark text appears from. This closes
+# the seam llms reported at 1.6.38 as the one line keeping header.py from
+# being cargo; DIVERGENCES.md 8's first half is retired by it.
+LOGO_ASSET = "llms.png"
+LOGO_STYLE = {"height": "36px", "width": "36px"}
+WORDMARK_COLOR = "#03c7e5"
+WORDMARK_VISIBLE_FROM = "xs"
+
 # Prefixed to every per-page title (`pages/markdown.py`, `pages/home.py`), and
 # therefore NOT only a browser-tab string: Dash passes the page title straight
 # into `og:title` and `twitter:title` (dash/_pages.py `_page_meta_tags`), so

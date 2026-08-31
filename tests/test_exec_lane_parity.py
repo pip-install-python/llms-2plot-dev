@@ -111,6 +111,45 @@ def test_a_fenced_directive_is_documentation_not_a_directive():
         )
 
 
+def test_a_paired_source_dedupes_the_auto_render():
+    """The dedupe rule (ops, template d5675d8): where a `.. source::`
+    already inlines the module, the `.. exec::` must NOT render it again
+    — the two roads compose instead of doubling the page.
+
+    Inert on this fork today: no page pairs them (4 exec / 0 source,
+    measured 2026-08-31). Pinned anyway, because the rule arrives with
+    the sync and the first fork page to hand-pair would otherwise ship
+    its code twice with nothing to catch it.
+    """
+    from pages.markdown import _expand_source_directives
+
+    doc = (".. source::docs/robots_sandbox/robots_sandbox.py\n"
+           ".. exec::docs.robots_sandbox.robots_sandbox\n")
+    out = _expand_source_directives(doc)
+    assert out.count("# File: docs/robots_sandbox/robots_sandbox.py") == 1
+    assert "# Live component, rendered above" not in out, (
+        "the exec auto-rendered a module its own `.. source::` already "
+        "inlined — the page carries that code twice"
+    )
+
+
+def test_a_source_for_a_different_target_does_not_dedupe():
+    """The other half, and the one that matters: a `.. source::` naming
+    a DIFFERENT module must not suppress the exec. Without this the rule
+    swallows the very offender it exists to catch — any page with one
+    source and one unrelated exec would go silently back to stripped."""
+    from pages.markdown import _expand_source_directives
+
+    doc = (".. source::docs/crawler_view/crawler_view.py\n"
+           ".. exec::docs.robots_sandbox.robots_sandbox\n")
+    out = _expand_source_directives(doc)
+    assert "# File: docs/crawler_view/crawler_view.py" in out
+    assert "# Live component, rendered above" in out, (
+        "an unrelated `.. source::` suppressed the exec expansion — the "
+        "dedupe rule is matching on presence, not on target"
+    )
+
+
 def test_the_pin_is_not_vacuous():
     """THE MUTATION CHECK. Disable the expansion and the pins above must
     fail. Without this, a refactor that quietly stops expanding leaves

@@ -146,18 +146,41 @@ MUTATION-CHECKS itself — the expansion was disabled and all four content
 pins plus the vacuity guard were confirmed to go red before being
 restored.
 
-Recorded as a divergence because the template ships no `.. exec::`
-expansion: this fork is ahead of it here, not behind. Offered upstream
-and CONFIRMED there 2026-08-31 — the template has the same class on four
-documents in its raw-directive variant, worse than this fork's: the line
-is served LITERALLY, so an agent reads `.. exec::docs.…` as prose and
-gets neither the component nor the code, with nothing to signal that
-anything is missing. The template seat is holding the fix for the owner
-rather than landing it, because it changes what every machine document on
-that site contains. modelviewer answers the same class by PAIRING every
-`.. exec::` with a `.. source::`, which costs no parser change and is the
-better road where the pairs already exist; it cannot cover unpaired
-offenders, which is what both this fork and the template had.
+Recorded as a divergence because the template shipped no `.. exec::`
+expansion when this was written: this fork was ahead of it here, not
+behind. Offered upstream and CONFIRMED there 2026-08-31 — the template
+had the SAME variant as this fork, stripped-with-nothing-replacing, on
+three unpaired directives in `docs/fastapi-showcase`
+(`endpoint_explorer`, `async_demo`, `stress_test`): 19,378 bytes about
+three components with zero lines of any of them.
+
+AMENDED 2026-08-31, and the amendment is the point. An earlier version of
+this paragraph recorded the template as having a WORSE, raw-directive
+variant on four documents — a literal `.. exec::` line served as prose.
+That came from a naive substring count on the template side, corrected by
+its own seat; every one of those hits was inside a fence, which is
+documentation showing the syntax and is correctly left alone. Re-measured
+INDEPENDENTLY in that checkout before amending, rather than swapping one
+reported number for another: fence-aware, five docs carry real
+directives, and pairing is what separates them — four pair every `exec`
+with a `source` for the SAME target, so their code already reaches the
+machine lane, and only `fastapi-showcase`'s three are unpaired. The
+raw-variant distinction does not exist and never did.
+
+Kept rather than quietly rewritten because the error is instructive: a
+substring count that cannot see a fence is the same shape as this
+repo's own `git show … && diff` that printed "same" when the diff never
+ran (see the item 18 report). Both certify whatever is there.
+
+The template landed the fix at d5675d8 — the expansion shape below,
+through the same fence-aware pass, plus a dedupe rule from ops: the
+auto-render is skipped where a `.. source::` for the same target already
+exists, so the two roads compose, and a `.. source::` for a DIFFERENT
+target does not dedupe (pinned, or the rule swallows the offender it
+exists to catch). That is modelviewer's pairing road and this one
+composed rather than chosen between. This divergence RETIRES when the
+fleet inherits it by sync; until then the shapes differ only in the
+dedupe rule, which this fork has no paired page to need.
 
 ## Byte-owned paths
 

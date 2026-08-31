@@ -163,6 +163,29 @@ def _expand_source_directives(markdown_content: str) -> str:
         except Exception as exc:
             return f'\n<!-- Error reading {file_path}: {exc} -->\n'
 
+    # Targets a `.. source::` already inlines, as MODULE paths — an
+    # `.. exec::` naming one of them needs no auto-render, or the page
+    # carries its code twice. This is the dedupe rule ops added to the
+    # template's d5675d8, so the two roads compose: a fork may hand-pair
+    # (modelviewer's road) and still take the expansion. A `.. source::`
+    # for a DIFFERENT target must NOT dedupe, or the rule swallows the
+    # very offender it exists to catch — pinned in
+    # tests/test_exec_lane_parity.py. Inert on this fork today: no page
+    # here pairs them (measured 2026-08-31, 4 exec / 0 source).
+    paired = set()
+    fence = None
+    for line in markdown_content.split('\n'):
+        head = line.lstrip()[:3]
+        if fence is None and head in ('```', '~~~'):
+            fence = head
+        elif fence is not None and head == fence:
+            fence = None
+        elif fence is None:
+            m = _SOURCE_DIRECTIVE.match(line)
+            if m:
+                rel = m.group(1).strip()
+                paired.add(rel.removesuffix('.py').replace('/', '.'))
+
     out: List[str] = []
     fence = None  # the marker that opened the block we are inside, if any
     for line in markdown_content.split('\n'):
@@ -175,6 +198,8 @@ def _expand_source_directives(markdown_content: str) -> str:
             out.append(expansion(line))
             continue
         elif fence is None and _EXEC_DIRECTIVE.match(line):
+            if _EXEC_DIRECTIVE.match(line).group(1).strip() in paired:
+                continue  # its `.. source::` already inlines this module
             out.append(exec_expansion(line))
             continue
         out.append(line)

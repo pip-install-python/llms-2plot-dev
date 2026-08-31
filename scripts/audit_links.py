@@ -100,16 +100,23 @@ try:
 except Exception:  # pragma: no cover — running outside a checkout
     _INTERNAL_UA = "2plot-internal/1.0 (+https://2plot.ai/docs/satellite-analytics)"
 
-# NAMES THE BROWSER LANE (notes 70/74, measured here 2026-08-31). The old
-# string — "Mozilla/5.0 (compatible; link-audit/1.0) …" — carries no browser
-# ENGINE token, so dimll >= 2.8 classified it crawler: this audit walked
-# every page reading the CRAWLER document while reporting on the browser
-# one, and mark_hidden pages would 404 under it. The internal token stays IN
-# the string (substring match) so a sweep never lands in the ledger as a
-# visitor.
-AUDIT_UA = (
+AUDIT_UA = f"Mozilla/5.0 (compatible; link-audit/1.0) {_INTERNAL_UA}"
+
+# The IN-PROCESS client is a different question from the external probe, and
+# this script had it wrong until 2026-08-31 (pannellum found the same defect in
+# its fork's copy first): AUDIT_UA classifies CRAWLER — `(compatible; …)` — and
+# a bare test client is worse, sending `Werkzeug/x.y`, crawler lane at dimll
+# >= 2.8. Either way every `mark_hidden` page 404s to the audit and is reported
+# as a broken internal link, which is the delisting WORKING. So the local
+# sweep names a browser UA, and keeps the internal token on it so the sweep
+# does not land in a ledger as N desktop humans.
+#
+# TWO constants rather than one (template 9bff88e): I first changed AUDIT_UA
+# itself, which also re-lanes the EXTERNAL probes, where the lane is not the
+# question and the audit identity is. The split says which lane matters where.
+AUDIT_BROWSER_UA = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
-    f"(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 link-audit/1.0 {_INTERNAL_UA}"
+    f"(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 {_INTERNAL_UA}"
 )
 
 
@@ -159,7 +166,7 @@ def main() -> int:
     # use. Set once on the client rather than per call: the audit makes
     # dozens of requests and one forgotten `headers=` puts that fetch on
     # the other lane silently.
-    client.environ_base["HTTP_USER_AGENT"] = AUDIT_UA
+    client.environ_base["HTTP_USER_AGENT"] = AUDIT_BROWSER_UA
 
     import dash
 

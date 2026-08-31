@@ -126,7 +126,7 @@ docs-home ↔ package loop this site exists to close. `GITHUB_URL` itself
 points at the PACKAGE's repo, not this site's, for the same reason.
 
 **10. `.. exec::` expands into the machine lane; the template's does
-not (yet).** Item 18's amended highlight 7 names the fourth mechanism
+not YET — measured there too, and held for the owner.** Item 18's amended highlight 7 names the fourth mechanism
 for a silent surface: a markdown2dash directive that renders Dash
 components puts its output only in the React tree, while the machine
 lane, the prerender and the crawler HTML are built from the markdown
@@ -147,9 +147,17 @@ pins plus the vacuity guard were confirmed to go red before being
 restored.
 
 Recorded as a divergence because the template ships no `.. exec::`
-expansion: this fork is ahead of it here, not behind. Offered upstream —
-the shape is fork-invariant and the template's own docs use the
-directive.
+expansion: this fork is ahead of it here, not behind. Offered upstream
+and CONFIRMED there 2026-08-31 — the template has the same class on four
+documents in its raw-directive variant, worse than this fork's: the line
+is served LITERALLY, so an agent reads `.. exec::docs.…` as prose and
+gets neither the component nor the code, with nothing to signal that
+anything is missing. The template seat is holding the fix for the owner
+rather than landing it, because it changes what every machine document on
+that site contains. modelviewer answers the same class by PAIRING every
+`.. exec::` with a `.. source::`, which costs no parser change and is the
+better road where the pairs already exist; it cannot cover unpaired
+offenders, which is what both this fork and the template had.
 
 ## Byte-owned paths
 

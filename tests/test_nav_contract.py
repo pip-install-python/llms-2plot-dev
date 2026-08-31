@@ -553,7 +553,7 @@ PROSE_HEADINGS = [
 ]
 
 
-def test_prose_headings_are_not_read_as_releases(app_module, tmp_path):
+def test_prose_headings_are_not_read_as_releases(tmp_path):
     from pages.changelog import parse_changelog
 
     body = "# Changelog\n\n" + "\n\n".join(
@@ -567,42 +567,37 @@ def test_prose_headings_are_not_read_as_releases(app_module, tmp_path):
     )
 
 
-def test_this_repos_own_changelog_has_no_phantom_releases(app_module):
+def test_this_repos_own_changelog_has_no_phantom_releases():
     """The fixture proves the parser; this proves the FILE.
 
-    PORTED to this fork's changelog shape, which item 18's acceptance
-    anticipates ("/changelog badges read correctly on the fork's own
-    changelog shape"). This repo has labelled its releases
-    `## [llms-2plot-dev 1.5.0] - date` since 1.0.0 — the project name is
-    carried because this changelog sits beside the PACKAGE's and the two
-    are read together. So `_is_release_label`, which requires a bare
-    version, rejects all six of this file's real releases.
-
-    The defect the pin exists for is UNBRACKETED prose becoming a release
-    (muicharts' `## Component License Requirements`). Brackets are the
-    Keep a Changelog convention and `parse_changelog` already trusts them
-    as intent, so the fork-safe form of the same assertion is: every
-    rendered label must come from a BRACKETED heading, or else look like
-    a release. That still catches the phantom class — an unbracketed
-    prose heading has no brackets to vouch for it — while accepting a
-    label this repo brackets deliberately.
+    Counted against the HEADINGS, not against the labels (llms,
+    2026-08-31): its releases are `## [llms-2plot-dev 1.5.0]` — the project
+    name rides along because that changelog is read beside the package's —
+    so a pin demanding a bare version of every label rejected all six real
+    releases, and the fork had to port what it should have been able to
+    take. Brackets are the convention `parse_changelog` already trusts as
+    intent, so the property is: a heading becomes a release exactly when it
+    is bracketed or release-shaped, and prose sections stay prose.
     """
-    import re
-
     from pages.changelog import CHANGELOG_PATH, _is_release_label, parse_changelog
 
+    headings = [
+        line for line in CHANGELOG_PATH.read_text(encoding="utf-8").split("\n")
+        if line.startswith("## ")
+    ]
+    expected = [
+        h for h in headings
+        if h.startswith("## [") or _is_release_label(re.split(r"\s+[-–—]\s+", h[3:])[0])
+    ]
+    prose = [h for h in headings if h not in expected]
+    assert prose, (
+        "no prose `## ` section in this changelog — the pin cannot tell "
+        "whether prose would be excluded, so it is not proving anything yet"
+    )
     versions = parse_changelog(CHANGELOG_PATH)
-    assert versions, "this repo's CHANGELOG.md parsed as no releases at all"
-    bracketed = set(re.findall(r"^## \[([^\]]+)\]", CHANGELOG_PATH.read_text(), re.M))
-    phantom = [v["version"] for v in versions
-               if v["version"] not in bracketed and not _is_release_label(v["version"])]
-    assert phantom == [], f"prose rendered as releases on /changelog: {phantom}"
-
-    # And the fork-shape half is not vacuous: this repo's labels really do
-    # carry the project name, so the bracket clause is doing the work.
-    assert any(not _is_release_label(v) for v in bracketed), (
-        "every bracketed label is bare-version shaped — the clause above "
-        "is inert here and this test has drifted from its own reasoning"
+    assert len(versions) == len(expected), (
+        f"/changelog renders {len(versions)} releases for {len(expected)} "
+        f"release headings; prose sections present: {prose}"
     )
 
 
@@ -637,6 +632,19 @@ def test_battery_hidden_paths_match_the_registry(app_module):
 _REQUEST_METHODS = ("get", "post", "open", "request", "put", "delete", "head")
 
 
+def _code_only(src: str) -> str:
+    """Source with docstrings and `#` comments removed.
+
+    muicharts, 2026-08-31: the words pass while the header is gone — its
+    grep matched "User-Agent" inside an explanatory COMMENT, so deleting
+    the real header left the pin green. This one proved the point on
+    itself: the comment below describing the chained form made the pin
+    flag its own file.
+    """
+    src = re.sub(r'"""[\s\S]*?"""|\'\'\'[\s\S]*?\'\'\'', "", src)
+    return re.sub(r"#[^\n]*", "", src)
+
+
 def _client_names_a_ua(src: str, var: str) -> bool:
     """Does `var` — a bound `.test_client()` — name a UA on the wire?
 
@@ -667,18 +675,22 @@ def test_every_test_client_user_names_headers():
     offenders = []
     for folder in ("tests", "scripts"):
         for path in sorted((REPO / folder).glob("*.py")):
-            src = path.read_text()
+            src = _code_only(path.read_text())
             if ".test_client()" not in src:
                 continue
-            # `(?!\s*\.)` — the binding must BE the client, not the result
-            # of a chained call. Without it `body = app.test_client().get(
-            # "/", headers=headers)` binds `body` as a client that never
-            # names a UA, and this pin reports a false offender on a line
-            # that already passes headers (measured here 2026-08-31 on
-            # tests/test_prerender_idempotency.py). The per-call-site form
-            # fixed a false NEGATIVE and introduced this false POSITIVE.
+            # `(?!\s*\.)` — a CHAINED call binds the RESPONSE, not the
+            # client (`body = app.server.test_client().get(...)`), and the
+            # first cut of this pin read `body` as an unnamed client with no
+            # requests and flagged a line that already passed headers (llms,
+            # 2026-08-31, measured on its test_prerender_idempotency.py).
             bound = set(re.findall(r"(\w+)\s*=\s*[\w.]*\.test_client\(\)(?!\s*\.)", src))
             bound |= set(re.findall(r"\.test_client\(\)\s+as\s+(\w+)", src))
+            # Chained calls still get checked — on the call itself, since
+            # there is no client name to follow.
+            for meth in _REQUEST_METHODS:
+                for call in _calls(src, f".test_client().{meth}"):
+                    if "headers=" not in call:
+                        offenders.append(f"{folder}/{path.name}::<chained {meth}>")
             if not bound:
                 # Wrapped in place (conftest hands the raw client to a Client
                 # that always sends one) — no name to follow, so fall back.

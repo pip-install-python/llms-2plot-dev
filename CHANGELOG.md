@@ -102,10 +102,13 @@ boilerplate.2plot.dev as the other canary.**
   where it asserted 403, and `tests/test_showcase.py` asserts the panel
   shows the served document rather than a 403 — the showcase exists to
   show the truth about this host, so it moves with the posture.
-- **The `DIVERGENCES.md` posture fence's `ai_bots` row is INTERIM**,
-  dated 2026-08-30 14:09Z and still reading `403/200/403`, because the
-  fence records what the wire answers and the flip is not deployed. It
-  carries the before, the in-process after, and the expected wire reading.
+- **On the wire after deploy (build 625c91c, 22:05Z), both real UAs:**
+  `/` 200 (14,133 B crawler document) · `/llms.txt` 200 (13,801 B) ·
+  `/healthz` 200, and `/robots.txt` carrying `Allow: /` for ClaudeBot,
+  GPTBot and CCBot. **No edge wall appeared when the app's came down** —
+  every 403 this host ever served was its own, and the owner has since
+  confirmed no Cloudflare rule exists on the zone. The `DIVERGENCES.md`
+  posture fence is re-dated to `200/200/200`.
 
 ## [llms-2plot-dev 1.2.0] - 2026-08-29
 

@@ -187,12 +187,11 @@ re-measure when you change what this host serves:
               ahead of it is an uncertified push pending, never drift
               and never a hand deploy. ABSENT reads as `main`.
 
-`ai_bots` is INTERIM and dated below. Round 3.4 (owner decision,
-2026-08-30) retired this host's training wall in `run.py`
-(`block_ai_training=False`), and the fence records what the WIRE answers,
-not what the app intends — so it keeps the pre-flip reading until the
-flip is deployed and re-probed. History, so the next reading can be
-compared against something:
+`ai_bots` is CURRENT: round 3.4 (owner decision, 2026-08-30) retired
+this host's training wall in `run.py` (`block_ai_training=False`), the
+flip deployed in run 33337897170, and the values below are the wire's own
+answer afterwards. History, so the next reading can be compared against
+something:
 
   - 2026-08-29, build ae1dce6, wall UP: `/` 403 · `/llms.txt` 200 ·
     `/healthz` 403, identically for ClaudeBot and GPTBot.
@@ -202,17 +201,22 @@ compared against something:
     measured on this host is the APP's wall. No separate Cloudflare
     wall has been observed here; whether a zone rule exists at all is
     an open question for the owner, not something this fence can answer.
-  - 2026-08-30, in-process WITH the flip applied: `/` 200 (13,778 B
-    crawler document) · `/llms.txt` 200 · `/healthz` 200, both UAs.
-    Expected on the wire after deploy; the seat re-probes and this
-    block is re-dated to 200/200/200 then.
+  - 2026-08-30 22:05Z, build 625c91c, wall DOWN — the reading below:
+    `/` 200 (14,133 B crawler document) · `/llms.txt` 200 (13,801 B) ·
+    `/healthz` 200, identically for both UAs, and `/robots.txt` carrying
+    `Allow: /` for ClaudeBot, GPTBot and CCBot (this fork renders the
+    explicit allow rather than no stanza, because it passes the callable
+    `vendor_policy` seam — see divergence 2). NO edge wall appeared when
+    the app's came down, which settles the question above: every 403 this
+    host ever served was its own, and the owner has since confirmed no
+    Cloudflare rule exists on the zone at all.
 
-Measured on llms.2plot.dev, 2026-08-30 14:09Z, build 0081f65, with the
+Measured on llms.2plot.dev, 2026-08-30 22:05Z, build 625c91c, with the
 real ClaudeBot and GPTBot UAs for the `ai_bots` row and a browser UA for
 the `/healthz` body:
 
 ```yaml posture
-ai_bots: {"/": 403, "/llms.txt": 200, "/healthz": 403}
+ai_bots: {"/": 200, "/llms.txt": 200, "/healthz": 200}
 healthz: full
 runtime: python
 deploy: release-branch

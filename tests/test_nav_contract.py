@@ -539,6 +539,73 @@ def test_every_fleet_heading_shape_parses(tmp_path):
         assert not _re.match(r"^v(Unreleased|\d{4}-)", rendered_badge), "note 67(a): VUNRELEASED / v<date>"
 
 
+# Prose sections a changelog legitimately carries under `##`. THE FIXTURE
+# ABOVE COULD NOT CATCH THIS: it holds only release headings, so it never
+# asked what a NON-release heading does — and 1.6.41's widened match read
+# every one of these as a release (muicharts, 2026-08-31: a Timeline card
+# badged `Component License Requirements` and a page claiming 15 releases
+# where there are 14; this repo had two of its own).
+PROSE_HEADINGS = [
+    "## Migration Guides",
+    "## Support",
+    "## Component License Requirements",
+    "## Notes on upgrading",
+]
+
+
+def test_prose_headings_are_not_read_as_releases(app_module, tmp_path):
+    from pages.changelog import parse_changelog
+
+    body = "# Changelog\n\n" + "\n\n".join(
+        h + "\n\n- a bullet" for h in ["## [1.4.0] - 2026-08-03", *PROSE_HEADINGS]
+    )
+    p = tmp_path / "CHANGELOG.md"
+    p.write_text(body)
+    versions = parse_changelog(p)
+    assert [v["version"] for v in versions] == ["1.4.0"], (
+        "a prose section parsed as a release — the phantom-release defect"
+    )
+
+
+def test_this_repos_own_changelog_has_no_phantom_releases(app_module):
+    """The fixture proves the parser; this proves the FILE.
+
+    PORTED to this fork's changelog shape, which item 18's acceptance
+    anticipates ("/changelog badges read correctly on the fork's own
+    changelog shape"). This repo has labelled its releases
+    `## [llms-2plot-dev 1.5.0] - date` since 1.0.0 — the project name is
+    carried because this changelog sits beside the PACKAGE's and the two
+    are read together. So `_is_release_label`, which requires a bare
+    version, rejects all six of this file's real releases.
+
+    The defect the pin exists for is UNBRACKETED prose becoming a release
+    (muicharts' `## Component License Requirements`). Brackets are the
+    Keep a Changelog convention and `parse_changelog` already trusts them
+    as intent, so the fork-safe form of the same assertion is: every
+    rendered label must come from a BRACKETED heading, or else look like
+    a release. That still catches the phantom class — an unbracketed
+    prose heading has no brackets to vouch for it — while accepting a
+    label this repo brackets deliberately.
+    """
+    import re
+
+    from pages.changelog import CHANGELOG_PATH, _is_release_label, parse_changelog
+
+    versions = parse_changelog(CHANGELOG_PATH)
+    assert versions, "this repo's CHANGELOG.md parsed as no releases at all"
+    bracketed = set(re.findall(r"^## \[([^\]]+)\]", CHANGELOG_PATH.read_text(), re.M))
+    phantom = [v["version"] for v in versions
+               if v["version"] not in bracketed and not _is_release_label(v["version"])]
+    assert phantom == [], f"prose rendered as releases on /changelog: {phantom}"
+
+    # And the fork-shape half is not vacuous: this repo's labels really do
+    # carry the project name, so the bracket clause is doing the work.
+    assert any(not _is_release_label(v) for v in bracketed), (
+        "every bracketed label is bare-version shaped — the clause above "
+        "is inert here and this test has drifted from its own reasoning"
+    )
+
+
 def test_bold_spans_containing_inline_code_render(tmp_path):
     r"""Note 67(b): `**A \`/changelog\` page.** rest` rendered raw
     asterisks when code split before bold."""
@@ -567,16 +634,58 @@ def test_battery_hidden_paths_match_the_registry(app_module):
     )
 
 
+_REQUEST_METHODS = ("get", "post", "open", "request", "put", "delete", "head")
+
+
+def _client_names_a_ua(src: str, var: str) -> bool:
+    """Does `var` — a bound `.test_client()` — name a UA on the wire?
+
+    Either the client carries one for every request (`environ_base`), or
+    every request call on it passes `headers=`. A client that issues no
+    requests in this file cannot get the lane wrong here.
+    """
+    if re.search(re.escape(var) + r"\.environ_base\b[^\n]*HTTP_USER_AGENT", src):
+        return True
+    calls = [c for m in _REQUEST_METHODS for c in _calls(src, f"{var}.{m}")]
+    return bool(calls) and all("headers=" in c for c in calls)
+
+
 def test_every_test_client_user_names_headers():
     """Notes 70/74: a bare test client sends `Werkzeug/x.y` — crawler lane
     at dimll ≥ 2.8 — so a mark_hidden page 404s and an every-page-200 loop
     goes red at the floor bump. Any file that drives `.test_client()` must
-    pass headers (a named UA)."""
+    pass a named UA.
+
+    Resolved per CALL SITE, not per file (pannellum, 2026-08-31): the
+    substring form this pin shipped with — `"headers=" in src` — read the
+    whole file, so a tool whose `headers=` sat on a DIFFERENT code path
+    (urllib probes) passed while all three of its in-process fetches were
+    bare, and it flagged a bare-app test with no dimll middleware and no
+    lane to get wrong. It missed the only real offender in the tree that
+    measured it.
+    """
     offenders = []
     for folder in ("tests", "scripts"):
         for path in sorted((REPO / folder).glob("*.py")):
             src = path.read_text()
-            names_ua = "headers=" in src or "HTTP_USER_AGENT" in src
-            if ".test_client()" in src and not names_ua:
-                offenders.append(f"{folder}/{path.name}")
+            if ".test_client()" not in src:
+                continue
+            # `(?!\s*\.)` — the binding must BE the client, not the result
+            # of a chained call. Without it `body = app.test_client().get(
+            # "/", headers=headers)` binds `body` as a client that never
+            # names a UA, and this pin reports a false offender on a line
+            # that already passes headers (measured here 2026-08-31 on
+            # tests/test_prerender_idempotency.py). The per-call-site form
+            # fixed a false NEGATIVE and introduced this false POSITIVE.
+            bound = set(re.findall(r"(\w+)\s*=\s*[\w.]*\.test_client\(\)(?!\s*\.)", src))
+            bound |= set(re.findall(r"\.test_client\(\)\s+as\s+(\w+)", src))
+            if not bound:
+                # Wrapped in place (conftest hands the raw client to a Client
+                # that always sends one) — no name to follow, so fall back.
+                if "headers=" not in src and "HTTP_USER_AGENT" not in src:
+                    offenders.append(f"{folder}/{path.name}")
+                continue
+            for var in sorted(bound):
+                if not _client_names_a_ua(src, var):
+                    offenders.append(f"{folder}/{path.name}::{var}")
     assert offenders == [], offenders

@@ -100,7 +100,17 @@ try:
 except Exception:  # pragma: no cover — running outside a checkout
     _INTERNAL_UA = "2plot-internal/1.0 (+https://2plot.ai/docs/satellite-analytics)"
 
-AUDIT_UA = f"Mozilla/5.0 (compatible; link-audit/1.0) {_INTERNAL_UA}"
+# NAMES THE BROWSER LANE (notes 70/74, measured here 2026-08-31). The old
+# string — "Mozilla/5.0 (compatible; link-audit/1.0) …" — carries no browser
+# ENGINE token, so dimll >= 2.8 classified it crawler: this audit walked
+# every page reading the CRAWLER document while reporting on the browser
+# one, and mark_hidden pages would 404 under it. The internal token stays IN
+# the string (substring match) so a sweep never lands in the ledger as a
+# visitor.
+AUDIT_UA = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+    f"(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 link-audit/1.0 {_INTERNAL_UA}"
+)
 
 
 def check_external(url: str, cache: Dict[str, int], _retrying: bool = False) -> int:
@@ -145,6 +155,11 @@ def main() -> int:
 
     module = boot()
     client = module.app.server.test_client()
+    # Every in-process fetch below carries the same UA the urllib probes
+    # use. Set once on the client rather than per call: the audit makes
+    # dozens of requests and one forgotten `headers=` puts that fetch on
+    # the other lane silently.
+    client.environ_base["HTTP_USER_AGENT"] = AUDIT_UA
 
     import dash
 

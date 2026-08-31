@@ -187,6 +187,25 @@ re-measure when you change what this host serves:
               ahead of it is an uncertified push pending, never drift
               and never a hand deploy. ABSENT reads as `main`.
 
+              MEASURED on this host, not merely consistent-with, and by
+              the negative control rather than the happy path. Item 13's
+              notes say a first promoted run cannot tell
+              autoDeploy-from-main from autoDeploy-from-release, because
+              both branches then hold the same sha. A RED push separates
+              them, and this host had one. Run 33337712632: `ee75b5b`
+              reached `main` at 21:55:01Z and the matrix went red at
+              21:57:01Z on `ci / lint`, so the `deploy` job SKIPPED and
+              `release` never moved — it went `bdd8e77` → `625c91c` and
+              never held `ee75b5b` (this session's own readings). The ops
+              seat's sampler, which this session did not run, shows the
+              wire holding `bdd8e77` across the whole window
+              21:54:34–22:01:29. On a host whose promote→wire time is
+              about 90 seconds, a Render watching `main` would have built
+              the red sha inside that window. It did not. The two halves
+              together are the proof; neither is sufficient alone.
+              Corroborating, from the seat's timing of the next run:
+              `release` 22:01:29Z → wire 22:02:56Z, promote-first.
+
 `ai_bots` is CURRENT: round 3.4 (owner decision, 2026-08-30) retired
 this host's training wall in `run.py` (`block_ai_training=False`), the
 flip deployed in run 33337897170, and the values below are the wire's own

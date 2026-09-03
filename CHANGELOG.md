@@ -5,6 +5,47 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [llms-2plot-dev 1.6.0] - 2026-09-03
+
+**Sync 1.6.43, all three items.**
+
+### Fixed
+
+- **The read table drops internal traffic too.** `track_visit` has
+  dropped requests carrying `INTERNAL_UA_TOKEN` since the network's
+  internal-traffic contract existed; `record_read` — the
+  `on_document_read` hook added with the 2.8.0 floor — never learned it.
+  So the hub's health sweep, this site's own link audit and every
+  post-deploy battery were writing `reads` rows, and were the busiest
+  unidentified "vendor" on this host's board. Measured before the fix:
+  one token-carrying probe wrote one row, `vendor_key` null, crawler
+  lane. "Counted nowhere" now includes the read table.
+  **Reporting consequence:** read counts DROP from this release, and the
+  drop is the network's own probes leaving the numbers. The clean window
+  for this host's ledger starts 2026-09-02 (ops' fleet ruling); earlier
+  rows keep the inflation and are not being re-sent, because re-importing
+  them would re-import exactly what this fix removes.
+
+### Changed
+
+- **Three verification traps added to `.claude/CLAUDE.md`** — which
+  branch Render builds can be timed on a green push but is only PROVEN by
+  a red one (this host has that proof, run 33337712632); a disagreeing
+  lane IS the finding, and the browser lane spans three artifacts of
+  which curl sees two; and assert a corpus is non-empty before trusting
+  any negative, with four families of silent-green measured in this tree.
+
+### Notes
+
+- The drop keys on `ua`, which is what the package's `EVENT_FIELDS` calls
+  it — `user_agent` is the visits row's name and keying on it here would
+  have been a silent no-op. Verified by reading `EVENT_FIELDS` out of the
+  wheels rather than inferring: `ua` present at 2.8.0 (local), 2.9.0
+  (**what production actually resolves**) and 2.9.4 (what CI pulls from
+  the `>=2.8.0` floor); `user_agent` present at none. 2.9.4 adds
+  `vendor_class`, which this fork picks up automatically because the row
+  is built by iterating `EVENT_FIELDS`.
+
 ## [llms-2plot-dev 1.5.0] - 2026-08-31
 
 **Sync item 18 — the 1.6.41 remainder, nineteen files as one contract.**

@@ -399,6 +399,28 @@ class AnalyticsTracker:
         """
         if not isinstance(event, dict):
             return
+
+        # Network machinery is never a READER either (1.6.43 item 1, note
+        # 83a). `track_visit` has dropped the internal token since the
+        # internal-traffic contract existed; this hook never learned it, so
+        # the hub's health sweep, every satellite's link audit and every
+        # post-deploy battery were landing in `reads` — measured here
+        # before the fix: one probe carrying the token wrote one row,
+        # vendor_key None, crawler lane, which made the network's own
+        # probes the busiest unidentified "vendor" on this host's board.
+        # "Counted nowhere" has to include the read table, or the contract
+        # is only half held.
+        #
+        # Keyed on `ua`, which is what `_ledger.EVENT_FIELDS` calls it —
+        # `user_agent` is the VISITS row's name and keying on it here
+        # would be a silent no-op, which is this item's own failure mode.
+        # Dropped BEFORE the row is built, so nothing about an internal
+        # request is read, let alone kept.
+        from lib.constants import INTERNAL_UA_TOKEN
+
+        if INTERNAL_UA_TOKEN in (event.get("ua") or "").lower():
+            return
+
         row = {k: event.get(k) for k in EVENT_FIELDS}
         if not KEEP_CLIENT_IP:
             row.pop("client_ip", None)

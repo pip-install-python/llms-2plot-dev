@@ -36,6 +36,17 @@ from lib.constants import INTERNAL_UA, INTERNAL_UA_TOKEN, internal_ua
 # against one of those would pass no matter what the tracker did.
 PAGE = "/reference/configuration"
 
+# The READ table is written only for corpus documents the package serves
+# (`on_document_read`), never for a browser page — so the reads-side pins
+# below must ask for a machine surface, not PAGE.
+LLMS_DOC_PATH = "/llms.txt"
+
+# A real vendor, NOT carrying the internal token: the positive control for
+# the reads pins. In-process only — never send this at a live host, which
+# would write an unverified vendor row into a real ledger.
+VENDOR_UA = ("Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; "
+             "GPTBot/1.2; +https://openai.com/gptbot)")
+
 
 def _ledger_visits():
     """Every hit on disk, flushing the write buffer first."""
@@ -43,6 +54,16 @@ def _ledger_visits():
     try:
         with open(analytics_path()) as f:
             return json.load(f).get("visits", [])
+    except FileNotFoundError:
+        return []
+
+
+def _ledger_reads():
+    """Every READ row on disk, flushing first — the second table (1.6.34)."""
+    tracker.flush()
+    try:
+        with open(analytics_path()) as f:
+            return json.load(f).get("reads", [])
     except FileNotFoundError:
         return []
 
@@ -107,6 +128,55 @@ def test_a_crawler_shaped_probe_carrying_the_token_stays_internal(client):
     before = len(_ledger_visits())
     client.get(PAGE, user_agent=f"{CRAWLER_UA} {INTERNAL_UA}")
     assert len(_ledger_visits()) == before
+
+
+def test_internal_ua_is_counted_nowhere_in_the_READ_table(client):
+    """"Counted nowhere" includes the read table (1.6.43 item 1, note 83a).
+
+    `track_visit` has dropped the token since this contract existed;
+    `record_read` — the `on_document_read` hook the 2.8.0 floor added —
+    did not, so the hub's health sweep, every satellite's link audit and
+    every post-deploy battery were landing in `reads`. Measured on this
+    host before the fix: one token-carrying probe wrote one row,
+    vendor_key None, crawler lane, which made the network's own probes
+    the busiest unidentified vendor on this board.
+
+    BOTH DIRECTIONS IN ONE TEST, deliberately: a drop that dropped
+    everything would pass the first assertion alone, and this round has
+    learned not to trust a bare negative. The counts are in the failure
+    messages for the same reason.
+    """
+    before = len(_ledger_reads())
+    client.get(LLMS_DOC_PATH, user_agent=internal_ua("network-smoke"))
+    client.get(LLMS_DOC_PATH, user_agent=f"{CRAWLER_UA} {INTERNAL_UA}")
+    after = len(_ledger_reads())
+    assert after == before, (
+        f"internal traffic reached the read table: {before} -> {after}"
+    )
+
+    # ... and the table is still reachable, so the assertion above is not
+    # passing because nothing can ever be written.
+    client.get(LLMS_DOC_PATH, user_agent=VENDOR_UA)
+    real = len(_ledger_reads())
+    assert real == after + 1, (
+        f"a real crawler wrote {real - after} read rows, expected 1 — the "
+        "drop is dropping everything and the pin above is vacuous"
+    )
+
+
+def test_the_read_drop_keys_on_the_packages_own_field_name(client):
+    """`EVENT_FIELDS` calls it `ua`; the visits row calls it `user_agent`.
+
+    Keying the drop on the wrong name is silently a no-op — item 1's own
+    failure mode. Verified against the wheels this host can run: `ua` is
+    in EVENT_FIELDS at 2.8.0 (local), 2.9.0 (production) and 2.9.4 (what
+    CI resolves from the >=2.8.0 floor), and `user_agent` is in none of
+    them.
+    """
+    from dash_improve_my_llms._ledger import EVENT_FIELDS
+
+    assert "ua" in EVENT_FIELDS
+    assert "user_agent" not in EVENT_FIELDS
 
 
 def test_the_token_is_matched_case_insensitively(client):

@@ -143,6 +143,42 @@ they win.
   fast-forward push of the run's sha after a green matrix. `main`
   ahead of `release` is an uncertified push pending — never drift,
   never a hand deploy. Compare against `origin/release`.
+- **Which branch Render builds can be measured on a GREEN push, by
+  TIMING — but that is evidence, not proof** (leaflet, 1.6.43).
+  `main == release == wire` at every step of a promote tells you
+  nothing, because both roads end at the same sha. Sample `/healthz`
+  every ~45 s and time the swap against the **promote**, not the
+  push. The canonical discriminator is still the first push that goes
+  RED on main with `release` unmoved and the wire unchanged, and
+  THIS HOST HAS ONE — run 33337712632, 2026-08-31: ee75b5b red on
+  `ci / lint` at 21:57:01Z, promote skipped, `release` went
+  bdd8e77 → 625c91c without ever holding it, and the wire held
+  bdd8e77 across 21:54:34–22:01:29 on a ~90 s promote→wire host. The
+  `deploy: release-branch` fence row here is proven, not inferred.
+  Four forks correctly declined to call theirs proven on a green
+  push; that refusal is the standard.
+- **Verify the artifact the claim is about, and SAY WHICH ONE. When a
+  lane disagrees, THAT IS THE FINDING** (pannellum, excalidraw). Moving
+  an assertion to the lane that passes held a pin for a fortnight over
+  a corpus serving zero props. The inverse wastes more time: `curl … |
+  grep -c skip-link` returns **0** on a host where the skip link ships
+  and works, because it is a Dash component in `app.layout` — the
+  browser lane spans three artifacts (app-shell markup, the dimll
+  prerender block inside the SAME HTML, and the JS-rendered DOM) and
+  curl sees two of them.
+- **ASSERT THE CORPUS IS NON-EMPTY before trusting any negative, and
+  print the count beside the result.** A sweep that found nothing and a
+  sweep that swept nothing produce the same green. This repo's
+  `.flake8` excludes `docs/*/`, so `flake8 docs/` exits 0 on a file
+  containing `def broken(:` — not passing it, not reading it.
+  Same family, all measured in this tree: a `pytest … | tail` whose
+  exit status is `tail`'s, not pytest's (use `pytest … > log; rc=$?`
+  — and note `PIPESTATUS` is bash, `pipestatus` is zsh, so the bash
+  form silently expands to nothing here); a `git show X:f > out &&
+  diff` that printed "same" when the `show` failed and the `diff`
+  never ran; and a regex for `EVENT_FIELDS` that parsed a COMMENT
+  inside the tuple and reported a field missing that was present —
+  use `ast`, not a regex, to read a literal out of source.
 - **There is ONE classifier**, `dash_improve_my_llms.classify()`.
   `lib/analytics_tracker.py` delegates `is_bot` / `detect_bot_type`
   to it and ends with ZERO User-Agent strings; the old in-module

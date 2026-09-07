@@ -1,6 +1,6 @@
 # Core scientific stack
 pandas>=1.2.3
-plotly>=6.9.0
+plotly>=7.0.0
 requests>=2.27.1
 retrying
 setuptools
@@ -154,10 +154,10 @@ python-dotenv>=1.0.0
 #
 # 2.6.1 remains the previous rung and its reason is still live: below it the
 # universal prerender ships VISIBLE to non-JS consumers.
-dash-improve-my-llms[flask]>=2.8.0
-# dash-improve-my-llms[fastapi]>=2.8.0   # Dash 4.4+ FastAPI backend
-# dash-improve-my-llms[quart]>=2.8.0     # Dash 4.4+ Quart backend
-# dash-improve-my-llms[all]>=2.8.0       # all three
+dash-improve-my-llms[flask]>=2.10.0
+# dash-improve-my-llms[fastapi]>=2.10.0   # Dash 4.4+ FastAPI backend
+# dash-improve-my-llms[quart]>=2.10.0     # Dash 4.4+ Quart backend
+# dash-improve-my-llms[all]>=2.10.0       # all three
 
 # Clerk authentication (dash-clerk-auth, vendored — not on PyPI).
 #
